@@ -11,10 +11,15 @@ def handle_post(request):
 	song = request['form']['musicString']
 
 	c.execute('''INSERT into song_table VALUES (?,?,?);''', (songname,song,datetime.datetime.now()))
+
+	db_stuff = c.execute('''SELECT * FROM song_table''').fetchall()
+	outs = ''
+	for thing in db_stuff:
+		outs += 'song name: ' + thing[0] + ', song: ' + thing[1] + ', timestamp: ' + thing[2].strftime("%Y-%m-%d %H:%M:%S") + '\n'
 	conn.commit()
 	conn.close()
 
-	return "Song uploaded!"
+	return outs
 
 def request_handler(request):
 	if request['method'] == 'POST':
