@@ -11,6 +11,8 @@ def handle_post(request):
 	song = request['values']['song']
 
 	c.execute('''INSERT into song_table VALUES (?,?,?);''', (songname,song,datetime.datetime.now()))
+	conn.commit()
+    conn.close()
 
 	return "Song uploaded!"
 
