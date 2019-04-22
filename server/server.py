@@ -15,7 +15,7 @@ def handle_post(request):
 	db_stuff = c.execute('''SELECT * FROM song_table''').fetchall()
 	outs = ''
 	for thing in db_stuff:
-		outs += 'song name: ' + thing[0] + ', song: ' + thing[1] + ', timestamp: ' + thing[2].strftime("%Y-%m-%d %H:%M:%S") + '\n'
+		outs += 'song name: ' + thing[0] + ', song: ' + thing[1] + ', timestamp: ' + thing[2] + '\n'
 	conn.commit()
 	conn.close()
 
