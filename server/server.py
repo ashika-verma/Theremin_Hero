@@ -14,12 +14,12 @@ def handle_post(request):
 	songName = request['form']['songName']
 	song = request['form']['musicString']
 
-	c.execute('''INSERT OR IGNORE into songs VALUES (NULL,?,?,?);''', (songName,song,datetime.datetime.now()))
+	c.execute('''INSERT OR IGNORE into song_table VALUES (NULL, ?,?,?);''', (songName,song,datetime.datetime.now()))
 
 	dbSongs = c.execute('''SELECT * FROM songs''').fetchall()
 	outs = ''
-	for song in dbSongs:
-		outs += 'song id: ' + str(song[0]) + ', song name: ' + song[1] + ', song: ' + song[2] + ', timestamp: ' + song[3] + '\n'
+	for thing in dbSongs:
+		outs += 'song id: ' + str(thing[0]) + ', song name: ' + thing[1] + ', song: ' + thing[2] + ', timestamp: ' + thing[3] + '\n'
 
 	conn.commit()
 	conn.close()
@@ -39,10 +39,10 @@ def handle_get(request):
 		songName = request["values"]["songName"]
 		dbSongs = c.execute('''SELECT id,song FROM songs WHERE songName = ? ORDER BY timing ASC;''', (songName,)).fetchall()
 	else:
-		dbSongs = c.execute('''SELECT id,song FROM songs ORDER BY timing ASC;''').fetchall()
+		dbSongs = c.execute('''SELECT id,songName FROM song_table ORDER BY timing ASC''').fetchall()
 	songs = ''
 	for song in dbSongs:
-		songs += str(song[0]) + ',' + song[1] + '\n'
+		songs += song[0] + ',' + song[1] + '\n'
 
 	conn.commit()
 	conn.close()
