@@ -16,7 +16,7 @@ def handle_post(request):
 
 	c.execute('''INSERT OR IGNORE into song_table VALUES (NULL,?,?,?);''', (songName,song,datetime.datetime.now()))
 
-	dbSongs = c.execute('''SELECT * FROM songs''').fetchall()
+	dbSongs = c.execute('''SELECT * FROM song_table''').fetchall()
 	outs = ''
 	for song in dbSongs:
 		outs += 'song id: ' + str(song[0]) + ', song name: ' + song[1] + ', song: ' + song[2] + ', timestamp: ' + song[3] + '\n'
@@ -37,7 +37,7 @@ def handle_get(request):
 
 	if "songName" in request["args"]:
 		songName = request["values"]["songName"]
-		dbSongs = c.execute('''SELECT id,song FROM songs WHERE songName = ? ORDER BY timing ASC;''', (songName,)).fetchall()
+		dbSongs = c.execute('''SELECT id,song FROM song_table WHERE songName = ? ORDER BY timing ASC;''', (songName,)).fetchall()
 	else:
 		dbSongs = c.execute('''SELECT id,song FROM song_table ORDER BY timing ASC;''').fetchall()
 
