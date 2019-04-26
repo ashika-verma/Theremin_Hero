@@ -14,12 +14,12 @@ def handle_post(request):
 	songName = request['form']['songName']
 	song = request['form']['musicString']
 
-	c.execute('''INSERT OR IGNORE into song_table VALUES (?,?,?);''', (songName,song,datetime.datetime.now()))
+	c.execute('''INSERT OR IGNORE into song_table VALUES (NULL, ?,?,?);''', (songName,song,datetime.datetime.now()))
 
 	dbSongs = c.execute('''SELECT * FROM song_table''').fetchall()
 	outs = ''
 	for thing in dbSongs:
-		outs += 'song id: ' + thing[0] + ', song name: ' + thing[1] + ', song: ' + thing[2] + ', timestamp: ' + thing[3] + '\n'
+		outs += 'song id: ' + str(thing[0]) + ', song name: ' + thing[1] + ', song: ' + thing[2] + ', timestamp: ' + thing[3] + '\n'
 
 	conn.commit()
 	conn.close()
@@ -38,10 +38,10 @@ def handle_get(request):
 	if "songName" in request["args"]:
 		dbSongs = c.execute('''SELECT * FROM song_table WHERE songName = ? ORDER BY timing''', (songName)).fetchall()
 	else:
-		dbSongs = c.execute('''SELECT * FROM song_table ORDER BY timing ASC''').fetchall()
+		dbSongs = c.execute('''SELECT id,songName FROM song_table ORDER BY timing ASC''').fetchall()
 	songs = ''
 	for song in dbSongs:
-		songs += song[0] + ',' + song[2] + '\n'
+		songs += song[0] + ',' + song[1] + '\n'
 
 	conn.commit()
 	conn.close()
