@@ -3,8 +3,32 @@ $(function() {
     $("#home-tab").click();
   });
 
+  $("#songs-body").on("click", "a", function(e) {
+    $("#song-tab").show().click();
+    var songName = $(e.target).data("name");
+    console.log(songName);
+    $.get("https://608dev.net/sandbox/sc/kgarner/project/server.py?songName=" + songName)
+      .done(function(result) {
+        console.log(result);
+        $("#song-content").html(result);
+      });
+    console.log();
+  });
+
   $("#windowTabs a.nav-link").on("shown.bs.tab", function(e) {
-    if (e.target.id !== "song-tab") {
+    if (e.target.id === "songs-tab") {
+      $.get("https://608dev.net/sandbox/sc/kgarner/project/server.py")
+        .done(function(result) {
+          console.log(result);
+          var html = $.map(result.split("\n"),
+            function(line) {
+              var part = line.split(",");
+              return `<div><a href="#" data-name="${part[1]}">${part[1]}</a></div>`;
+            }
+          ).join("\n");
+          $("#songs-body").html($(html));
+        });
+    } else if (e.target.id !== "song-tab") {
       $("#song-tab").hide();
     }
   });
