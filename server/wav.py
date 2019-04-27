@@ -2,6 +2,7 @@ import numpy as np
 from scipy.io import wavfile
 from scipy.signal import resample
 
+#adapted from https://stackoverflow.com/questions/8299303/generating-sine-wave-sound-in-python
 volume = 0.5     # range [0.0, 1.0]
 fs = 44100       # sampling rate, Hz, must be integer
 duration = 1.0   # in seconds, may be float
