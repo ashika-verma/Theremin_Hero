@@ -1,29 +1,29 @@
 import numpy as np
-from scipy.io import wavfile
-from scipy.signal import resample
+import soundfile as sf
+
+path = "/var/jail/home/kgarner/"
 
 #adapted from https://stackoverflow.com/questions/8299303/generating-sine-wave-sound-in-python
-volume = 0.5     # range [0.0, 1.0]
 fs = 44100       # sampling rate, Hz, must be integer
-duration = 1.0   # in seconds, may be float
-f = 430.0     # sine frequency, Hz, may be float
+block_length = 1 # in seconds, may be float
 
-# generate samples, note conversion to float32 array
-start=fs*duration
+def create_sample(frequency: float, duration: int):
+  return np.sin(2 * np.pi * np.arange(0, fs * duration) * frequency / fs)
 
-samples = (np.sin(2*np.pi*np.arange(fs*duration)*f/fs)).astype(np.float32)
+def create_song(notes: list):
+  song = []
 
-volume = 0.5     # range [0.0, 1.0]
-fs = 44100       # sampling rate, Hz, must be integer
-duration = 1.0   # in seconds, may be float
-f = 440.0        # sine frequency, Hz, may be float
+  for note in notes:
+    freq, dur = note.split(",")
 
-samples2 =  (np.sin(2*np.pi*np.arange(start, start + fs*duration)*f/fs)).astype(np.float32)
+    freq = float(freq)
+    dur = int(dur)
 
-print(samples)
-print(samples2)
-print(samples + samples2)
+    song.append(create_sample(freq, dur))
 
-wavfile.write('output2.wav', 44100, samples2)
-wavfile.write('output.wav', 44100, samples)
-wavfile.write('output3.wav', 44100, samples + samples2)
+  return np.concatenate(song)
+
+def write_song_from_string(name: str, song: str):
+  notes = song.split(";")
+  song = create_song(notes)
+  sf.write(path + name + ".ogg", song, 44100, format="OGG")

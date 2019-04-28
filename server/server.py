@@ -1,7 +1,20 @@
 import sqlite3
 import datetime
+import base64
+import sys
+
+sys.path.append('__HOME__/project')
+from wav import write_song_from_string
+
 song_db = "__HOME__/songs.db"
 
+def read_song(name: str, id: int):
+	song = open("__HOME__/" + name + "-" + str(id)  + ".ogg", "rb")
+	base64_encoded = base64.encodebytes(song.read())
+
+	return """
+		<audio controls src="data:audio/ogg;base64,{}"/>
+		""".format(base64_encoded.decode("utf-8"))
 
 def handle_post(request):
 	conn = sqlite3.connect(song_db)
@@ -13,19 +26,19 @@ def handle_post(request):
 
 	songName = request['form']['songName']
 	song = request['form']['musicString']
+	id = 0
 
-	c.execute('''INSERT OR IGNORE into song_table VALUES (NULL,?,?,?);''', (songName,song,datetime.datetime.now()))
+	try:
+		c.execute('''INSERT into song_table VALUES (NULL,?,?,?);''', (songName,song,datetime.datetime.now()))
+		id = c.lastrowid
+		write_song_from_string(songName + "-" + str(id), song)
+	except:
+		return "ERROR: error"
+	finally:
+		conn.commit()
+		conn.close()
 
-	dbSongs = c.execute('''SELECT * FROM song_table''').fetchall()
-	outs = ''
-	for song in dbSongs:
-		outs += 'song id: ' + str(song[0]) + ', song name: ' + song[1] + ', song: ' + song[2] + ', timestamp: ' + song[3] + '\n'
-
-	conn.commit()
-	conn.close()
-
-	return outs
-
+	return read_song(song, id)
 
 def handle_get(request):
 	conn = sqlite3.connect(song_db)
@@ -35,11 +48,16 @@ def handle_get(request):
 														song TEXT, 
 														timing TIMESTAMP);''')
 
-	if "songName" in request["args"]:
-		songName = request["values"]["songName"]
-		dbSongs = c.execute('''SELECT id,song FROM song_table WHERE songName = ? ORDER BY timing ASC;''', (songName,)).fetchall()
+	if "id" in request["args"]:
+		id = request["values"]["id"]
+		dbSongs = c.execute('''SELECT songName,id FROM song_table WHERE id = ? ORDER BY timing ASC;''', (id,)).fetchall()
+
+		if len(dbSongs) > 0:
+			song = dbSongs[0]
+			return read_song(song[0], song[1])
+
 	else:
-		dbSongs = c.execute('''SELECT id,song FROM song_table ORDER BY timing ASC;''').fetchall()
+		dbSongs = c.execute('''SELECT id,songName FROM song_table ORDER BY timing ASC;''').fetchall()
 
 	songs = ''
 	for song in dbSongs:
@@ -49,7 +67,6 @@ def handle_get(request):
 	conn.close()
 
 	return songs
-
 
 def request_handler(request):
 	if request['method'] == 'POST':
