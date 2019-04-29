@@ -32,10 +32,11 @@ def handle_post(request):
 		c.execute('''INSERT into song_table VALUES (NULL,?,?,?);''', (songName,song,datetime.datetime.now()))
 		id = c.lastrowid
 		write_song_from_string(songName + "-" + str(id), song)
-	except:
-		return "ERROR: error"
-	finally:
 		conn.commit()
+	except Exception as e:
+		conn.rollback()
+		raise e
+	finally:
 		conn.close()
 
 	return read_song(songName, id)
