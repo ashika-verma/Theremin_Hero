@@ -46,4 +46,5 @@ def freq_from_fft(sig, fs):
 
 
 def to_esp_encoding(sig, fs):
-    return "".join([str(freq_from_fft(sub_sig, fs)) + "," + "1;" for sub_sig in np.split(sig, len(sig)/(fs*0.1))])
+    sub_len = len(sig)//(fs*0.1)
+    return "".join([str(freq_from_fft(sub_sig, fs)) + "," + "1;" for sub_sig in np.split(sig[:len(sig) - len(sig)%sub_len], sub_len)])
