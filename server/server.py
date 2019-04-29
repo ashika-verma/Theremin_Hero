@@ -38,7 +38,7 @@ def handle_post(request):
 		conn.commit()
 		conn.close()
 
-	return read_song(song, id)
+	return read_song(songName, id)
 
 def handle_get(request):
 	conn = sqlite3.connect(song_db)
