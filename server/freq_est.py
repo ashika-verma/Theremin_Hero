@@ -39,7 +39,7 @@ def freq_from_fft(sig, fs):
 
     # Find the peak and interpolate to get a more accurate peak
     i = np.argmax(abs(f))  # Just use this for less-accurate, naive version
-    true_i = parabolic(log(abs(f)), i)[0]
+    true_i = parabolic(np.log(abs(f)), i)[0]
 
     # Convert to equivalent frequency
     return fs * true_i / len(windowed)
