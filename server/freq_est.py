@@ -1,6 +1,7 @@
 import numpy as np
 import soundfile as sf
 from numpy import polyfit, arange
+from numpy.fft import rfft
 from scipy.signal import blackmanharris, fftconvolve
 
 # from: https://gist.github.com/endolith/255291
@@ -34,7 +35,7 @@ def freq_from_fft(sig, fs):
     """
     # Compute Fourier transform of windowed signal
     windowed = sig * blackmanharris(len(sig))
-    f = np.rfft(windowed)
+    f = rfft(windowed)
 
     # Find the peak and interpolate to get a more accurate peak
     i = np.argmax(abs(f))  # Just use this for less-accurate, naive version
