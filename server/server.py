@@ -35,7 +35,7 @@ def handle_post(request):
 		conn.commit()
 	except Exception as e:
 		conn.rollback()
-		raise e
+		return "ERROR: " + str(e)
 	finally:
 		conn.close()
 
@@ -45,18 +45,22 @@ def handle_get(request):
 	conn = sqlite3.connect(song_db)
 	c = conn.cursor()
 	c.execute('''CREATE TABLE IF NOT EXISTS song_table (id INTEGER PRIMARY KEY AUTOINCREMENT, 
-														songName TEXT UNIQUE, 
+														songName TEXT, 
 														song TEXT, 
 														timing TIMESTAMP);''')
 
 	if "id" in request["args"]:
 		id = request["values"]["id"]
-		dbSongs = c.execute('''SELECT songName,id FROM song_table WHERE id = ? ORDER BY timing ASC;''', (id,)).fetchall()
+		dbSongs = c.execute('''SELECT songName,id,song FROM song_table WHERE id = ? ORDER BY timing ASC;''', (id,)).fetchall()
 
 		if len(dbSongs) > 0:
 			song = dbSongs[0]
-			return read_song(song[0], song[1])
 
+			if request["values"].get("format") == "esp":
+				return song[2]
+			else:
+				return read_song(song[0], song[1])
+		return "ERROR: song not found"
 	else:
 		dbSongs = c.execute('''SELECT id,songName FROM song_table ORDER BY timing ASC;''').fetchall()
 
