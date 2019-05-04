@@ -9,7 +9,7 @@
 
 TFT_eSPI tft = TFT_eSPI();  // Invoke library, pins defined in User_Setup.h
 
-const uint8_t LOOP_PERIOD = 200; //milliseconds
+const uint8_t LOOP_PERIOD = 100; //milliseconds
 const uint8_t LOOP_COUNT = 5;
 
 uint32_t primary_timer = 0;
@@ -18,12 +18,9 @@ const char NOTES[10] = "CDEFGABC";
 
 char network[] = "MIT";
 
-char song[] = "261,1;293,1;329,1;349,1;391,1;440,1;493,1;523,1";
+char song[] = "261,3;293,1;329,1;349,1;391,1;440,1;493,1;523,4";
 const char delim[] = ",;";
-
-#include <map>
-
-int notes_freq[] = {262,294,330,349,392,440,494,523};
+const int notes_freq[] = {262,294,330,349,392,440,494,523};
 
 int find_closest(float freq) {
   int min_diff = INT32_MAX;
@@ -65,10 +62,6 @@ class Note {
       this->y += 20;
     }
 
-    int get_x() {
-      return x;
-    }
-
     int get_y() {
       return y;
     }
@@ -88,7 +81,7 @@ std::vector<float> parse_song(char* input_song) {
     int duration = atof(token);
     token = strtok(NULL, delim);
 
-    for (int i = 0; i < duration * 5; i++) {
+    for (int i = 0; i < duration * LOOP_COUNT; i++) {
       output.push_back(freq);
     }
   }
@@ -98,7 +91,7 @@ std::vector<float> parse_song(char* input_song) {
 
 std::vector<float> freqs;
 std::list<Note> notes = {};
-int note_idx = -5;
+int note_idx = 0;
 
 void setup() {
   tft.init();
@@ -117,11 +110,9 @@ void loop() {
 
   tft.setCursor(0, 0);
 
-  if (note_idx + 5 < freqs.size()) {
-    notes.push_back(Note(freqs[note_idx + 5]));
+  if (note_idx < freqs.size()) {
+    notes.push_back(Note(freqs[note_idx]));
   }  
-
-  tft.printf("    %d, %d, %d", note_idx, notes.size(), freqs.size());
 
   for (Note &note : notes) {
     note.draw();
