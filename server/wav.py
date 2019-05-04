@@ -5,7 +5,7 @@ path = "/var/jail/home/kgarner/"
 
 #adapted from https://stackoverflow.com/questions/8299303/generating-sine-wave-sound-in-python
 fs = 44100       # sampling rate, Hz, must be integer
-block_length = 1 # in seconds, may be float
+block_length = .1 # in seconds, may be float
 
 
 def create_sample(frequency: float, start: float, end: float):
@@ -36,6 +36,9 @@ def create_song(notes: list):
 
 
 def write_song_from_string(name: str, song: str):
+  if song.endswith(";"):
+    song = song[-1]
+    
   notes = song.split(";")
   song = create_song(notes)
   sf.write(path + name + ".ogg", song, 44100, format="OGG")
