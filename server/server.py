@@ -29,6 +29,8 @@ def handle_post(request):
 	id = 0
 
 	try:
+		if song.endswith(";"):
+			song = song[:-1]
 		c.execute('''INSERT into song_table VALUES (NULL,?,?,?);''', (songName,song,datetime.datetime.now()))
 		id = c.lastrowid
 		write_song_from_string(songName + "-" + str(id), song)
