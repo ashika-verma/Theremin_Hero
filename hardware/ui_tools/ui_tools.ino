@@ -7,7 +7,7 @@
 #include <list>
 #include <WiFi.h> //Connect to WiFi Network
 #include <Wire.h>
-#include "Button.h"
+
 
 TFT_eSPI tft = TFT_eSPI();  // Invoke library, pins defined in User_Setup.h
 
@@ -26,6 +26,91 @@ const uint16_t OUT_BUFFER_SIZE = 3000; //size of buffer to hold HTTP response
 char request_buffer[IN_BUFFER_SIZE]; //char array buffer to hold HTTP request
 char response_buffer[OUT_BUFFER_SIZE]; //char array buffer to hold HTTP response
 
+class Button{
+  public:
+  uint32_t t_of_state_2;
+  uint32_t t_of_button_change;
+  uint32_t debounce_time;
+  uint32_t long_press_time;
+  uint8_t pin;
+  uint8_t flag;
+  bool button_pressed;
+  uint8_t state; // This is public for the sake of convenience
+
+  Button(int p) {
+    flag = 0;
+    state = 0;
+    pin = p;
+    t_of_state_2 = millis(); //init
+    t_of_button_change = millis(); //init
+    debounce_time = 10;
+    long_press_time = 1000;
+    button_pressed = 0;
+  }
+  void read() {
+    uint8_t button_state = digitalRead(pin);
+    button_pressed = !button_state;
+  }
+  int update() {
+    read();
+    flag = 0;
+    switch (state) {
+      case 0:
+        if (button_pressed) {
+          state = 1;
+          t_of_button_change = millis();
+        }
+        break;
+      case 1:
+        if (button_pressed) {
+          if (millis() - t_of_button_change >= debounce_time) {
+            state = 2;
+            t_of_state_2 = millis();
+          }
+        } else {
+          t_of_button_change = millis();
+          state = 0;
+        }
+        break;
+      case 2:
+        if (button_pressed) {
+          if (millis() - t_of_state_2 >= long_press_time) {
+            state = 3;
+          }
+        } else {
+          t_of_button_change = millis();
+          state = 4;
+        }
+        break;
+      case 3:
+        if (!button_pressed) {
+          t_of_button_change = millis();
+          state = 4;
+        }
+        break;
+      case 4:
+        if (button_pressed) {
+          if (millis() - t_of_state_2 < long_press_time) {
+            state = 2;
+          } else {
+            state = 3;
+          }
+          t_of_button_change = millis();
+        } else {
+          if (millis() - t_of_button_change >= debounce_time) {
+            state = 0;
+            if (millis() - t_of_state_2 < long_press_time) {
+              flag = 1;
+            } else {
+              flag = 2;
+            }
+          }
+        }
+    }
+    return flag;
+  }
+};
+
 const int ENTRIES_PER_SCREEN = 16;
 
 const int TOP_PIN = 16;
@@ -35,8 +120,8 @@ Button bottomPin(BOT_PIN);
 
 // wifi related vars
 char host[] = "608dev.net";
-const char network[] = "6s08";  //SSID for 6.08 Lab
-const char password[] = "iesc6s08"; //Password for 6.08 Lab
+const char network[] = "MIT";  //SSID for 6.08 Lab
+const char password[] = ""; //Password for 6.08 Lab
 
 char song[] = "261,3;293,1;329,1;349,1;391,1;440,1;493,1;523,1";
 const char delim[] = ",;";
@@ -189,7 +274,11 @@ void setup() {
 }
 
 #define MENU 0
-#define PLAY 1
+#define FREE_PLAY 1
+#define GET_SONG 2
+#define PLAY_OR_RESELECT 3
+#define PLAY 4
+#define RECORD 5
 
 uint8_t state = MENU;
 
@@ -212,12 +301,108 @@ void handleNotes() {
 
   if (note_idx >= freqs.size() && notes.size() == 0) {
     tft.fillScreen(TFT_BLACK);
-    state = MENU;
+    state = GET_SONG;
     note_idx = 0;
   }
 }
 
-void handleMenu() {
+std::string selectionScreenOptions[5] = {"Free Play Mode", "Get Song and Compete", "Record Song"};
+uint8_t selectedOption = 0;
+
+void handleMainMenu() {
+  tft.setCursor(0, 0);
+  for (int i = 0; i < 3; i++) {
+    tft.printf(selectedOption == i ? "-> ": "   ");
+    tft.printf("%s\n", selectionScreenOptions[i].c_str());
+  }
+}
+
+void drawFreePlayScreen() {
+  tft.setCursor(0, 0);
+  tft.println("Free Play Mode!");
+  tft.println("");
+  tft.println("Press Any Button to Exit to Main Screen");
+}
+
+void drawPlayOrReselectScreen() {
+  tft.setCursor(0, 0);
+  tft.println("Press Upper Button to Start the Game");
+  tft.println("Press Lower Button to Go Back to the Song Selection Menu");
+}
+
+void drawRecordScreen() {
+  tft.setCursor(0, 0);
+  tft.println("To Be Implemented!");
+}
+
+void handleGameState() {
+  
+  switch (state) {
+    case MENU:
+      handleMainMenu();
+      if (topPin.update() != 0) {
+        selectedOption = (selectedOption + 1) % 3;
+      } else if (bottomPin.update() != 0) {
+        switch (selectedOption) {
+          case 0:
+            state = FREE_PLAY;
+            tft.fillScreen(TFT_BLACK);
+            break;
+          case 1: 
+            state = GET_SONG;
+            tft.fillScreen(TFT_BLACK);
+            break;
+          case 2:
+            state = RECORD;
+            tft.fillScreen(TFT_BLACK);
+            break;
+        }
+      }
+      break;
+    case FREE_PLAY: 
+      drawFreePlayScreen();
+      // handle free play mode here! -TODO
+      if (bottomPin.update() != 0 || topPin.update() != 0) {
+        selectedOption = 0;
+        state = MENU;
+        tft.fillScreen(TFT_BLACK);
+      }
+      break;
+    case GET_SONG:
+      handleSongMenu();
+      break;
+    case PLAY_OR_RESELECT:
+      drawPlayOrReselectScreen();
+      if (topPin.update() != 0) {
+        state = PLAY;
+        tft.fillScreen(TFT_BLACK);
+        drawGameScreen();
+        // other stuff for score -TODO
+      } else if (bottomPin.update() != 0) {
+        state = GET_SONG;
+        tft.fillScreen(TFT_BLACK);
+      }
+      break;
+    case PLAY:
+      handleNotes();
+      if (bottomPin.update() != 0) {
+        selectedOption = 0;
+        state = MENU;
+        tft.fillScreen(TFT_BLACK);
+      }
+      break;
+    case RECORD:
+      drawRecordScreen();
+      if (bottomPin.update() != 0) {
+        selectedOption = 0;
+        state = MENU;
+        tft.fillScreen(TFT_BLACK);
+      }
+      break;
+  }
+}
+
+void handleSongMenu() {
   tft.setCursor(0, 0);
 
   for (uint16_t idx = songStart; idx < songEnd; idx++) {
@@ -232,8 +417,8 @@ void handleMenu() {
     do_http_request(host, request, response_buffer, OUT_BUFFER_SIZE, RESPONSE_TIMEOUT, true);
     freqs = parse_song(response_buffer);
     
-    state = PLAY;
-    draw_game_screen();
+    state = PLAY_OR_RESELECT;
+    tft.fillScreen(TFT_BLACK);
   } else if (topPin.update() != 0) {
     selectedSong++;
 
@@ -258,19 +443,12 @@ void handleMenu() {
 void loop() {
   primary_timer = millis();
 
-  switch(state) {
-    case MENU: 
-      handleMenu();
-      break;
-    case PLAY:
-      handleNotes();
-      break;
-  }
+  handleGameState();
   
   while(millis() - primary_timer < LOOP_PERIOD);
 }
 
-void draw_game_screen() {
+void drawGameScreen() {
   tft.fillScreen(TFT_BLACK);
   
   tft.drawLine(0, 95, 160, 95, TFT_GREEN);
