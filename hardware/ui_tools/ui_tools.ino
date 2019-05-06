@@ -7,7 +7,7 @@
 #include <list>
 #include <WiFi.h> //Connect to WiFi Network
 #include <Wire.h>
-
+#include "Button.h"
 
 TFT_eSPI tft = TFT_eSPI();  // Invoke library, pins defined in User_Setup.h
 
@@ -26,91 +26,6 @@ const uint16_t OUT_BUFFER_SIZE = 3000; //size of buffer to hold HTTP response
 char request_buffer[IN_BUFFER_SIZE]; //char array buffer to hold HTTP request
 char response_buffer[OUT_BUFFER_SIZE]; //char array buffer to hold HTTP response
 
-class Button{
-  public:
-  uint32_t t_of_state_2;
-  uint32_t t_of_button_change;
-  uint32_t debounce_time;
-  uint32_t long_press_time;
-  uint8_t pin;
-  uint8_t flag;
-  bool button_pressed;
-  uint8_t state; // This is public for the sake of convenience
-
-  Button(int p) {
-    flag = 0;
-    state = 0;
-    pin = p;
-    t_of_state_2 = millis(); //init
-    t_of_button_change = millis(); //init
-    debounce_time = 10;
-    long_press_time = 1000;
-    button_pressed = 0;
-  }
-  void read() {
-    uint8_t button_state = digitalRead(pin);
-    button_pressed = !button_state;
-  }
-  int update() {
-    read();
-    flag = 0;
-    switch (state) {
-      case 0:
-        if (button_pressed) {
-          state = 1;
-          t_of_button_change = millis();
-        }
-        break;
-      case 1:
-        if (button_pressed) {
-          if (millis() - t_of_button_change >= debounce_time) {
-            state = 2;
-            t_of_state_2 = millis();
-          }
-        } else {
-          t_of_button_change = millis();
-          state = 0;
-        }
-        break;
-      case 2:
-        if (button_pressed) {
-          if (millis() - t_of_state_2 >= long_press_time) {
-            state = 3;
-          }
-        } else {
-          t_of_button_change = millis();
-          state = 4;
-        }
-        break;
-      case 3:
-        if (!button_pressed) {
-          t_of_button_change = millis();
-          state = 4;
-        }
-        break;
-      case 4:
-        if (button_pressed) {
-          if (millis() - t_of_state_2 < long_press_time) {
-            state = 2;
-          } else {
-            state = 3;
-          }
-          t_of_button_change = millis();
-        } else {
-          if (millis() - t_of_button_change >= debounce_time) {
-            state = 0;
-            if (millis() - t_of_state_2 < long_press_time) {
-              flag = 1;
-            } else {
-              flag = 2;
-            }
-          }
-        }
-    }
-    return flag;
-  }
-};
-
 const int ENTRIES_PER_SCREEN = 16;
 
 const int TOP_PIN = 16;
@@ -120,8 +35,8 @@ Button bottomPin(BOT_PIN);
 
 // wifi related vars
 char host[] = "608dev.net";
-const char network[] = "MIT";  //SSID for 6.08 Lab
-const char password[] = ""; //Password for 6.08 Lab
+const char network[] = "6s08";  //SSID for 6.08 Lab
+const char password[] = "iesc6s08"; //Password for 6.08 Lab
 
 char song[] = "261,3;293,1;329,1;349,1;391,1;440,1;493,1;523,1";
 const char delim[] = ",;";
