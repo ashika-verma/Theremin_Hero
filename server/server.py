@@ -37,7 +37,7 @@ def handle_post(request):
 		conn.commit()
 	except Exception as e:
 		conn.rollback()
-		return "ERROR: " + str(e)
+		raise e
 	finally:
 		conn.close()
 

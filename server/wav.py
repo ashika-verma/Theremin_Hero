@@ -19,9 +19,12 @@ def create_song(notes: list):
   for note in notes:
 
     freq, dur = note.split(",")
-
+  
     freq = float(freq)
     dur = int(dur)
+
+    if freq == 0:
+      continue
 
     start = (fs * last_angle) / (2 * np.pi * freq) + 1
     end = start + block_length * fs * dur
@@ -37,13 +40,9 @@ def create_song(notes: list):
 
 def write_song_from_string(name: str, song: str):
   if song.endswith(";"):
-    song = song[-1]
+    song = song[:-1]
     
   notes = song.split(";")
   song = create_song(notes)
   sf.write(path + name + ".ogg", song, 44100, format="OGG")
 
-
-if __name__ == "__main__":
-  # write_song_from_string("song", "290,1;310,1;330,1;350,1;370,1;390,1;410,1")
-  pass
