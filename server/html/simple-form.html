@@ -9,7 +9,6 @@
   <body>
     <nav class="navbar navbar-light navabar-expand-lg" style="background-color: #e3f2fd;">
       <a class="navbar-brand h2" href="#" id="logo">Theremin Hero</a>
-
       <ul class="nav nav-pills" id="windowTabs" role="tablist">
         <li class="nav-item">
           <a class="nav-link active" id="home-tab" data-toggle="tab" href="#home" role="tab" aria-controls="home" aria-selected="true">Home</a>
@@ -21,9 +20,8 @@
           <a class="nav-link" id="uploads-tab" data-toggle="tab" href="#uploads" role="tab" aria-controls="uploads" aria-selected="false">Upload a song</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" id="song-tab" data-toggle="tab" href="#song" role="tab" aria-controls="song" aria-selected="false" style="display: none">Song</a>
+          <a class="nav-link" id="song-tab" data-toggle="tab" href="#song" role="tab"  style="display: none" aria-controls="song" aria-selected="false">Song</a>
         </li>
-
       </ul>
     </nav>
     <div class="container">
@@ -33,7 +31,6 @@
           </div>
           <div class="tab-pane fade" id="songs" role="tabpanel" aria-labelledby="songs-tab">
             <h3>Songs</h3>
-
             <div id="songs-body"></div>
           </div>
           <div class="tab-pane fade" id="uploads" role="tabpanel" aria-labelledby="uploads-tab">
@@ -52,6 +49,17 @@
           <div class="tab-pane fade" id="song" role="tabpanel" aria-labelledby="song-tab">
             <h4>Song: <span id="song-name"></span></h4>
             <div id="song-content"></div>
+            <div>
+              <div class="input-group">
+                <input type="text" class="form-control" placeholder=""/>
+                <div class="input-group-append">
+                  <button type="button" id="score-button" class="btn btn-outline-primary mt-2">
+                      Show scores
+                  </button>
+                </div>
+              </div>
+              <div id="scores"></div>
+            </div>
           </div>
         </div>
       </div>

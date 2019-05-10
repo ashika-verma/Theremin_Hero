@@ -1,4 +1,6 @@
 $(function() {
+  var songId, userId, showScores = true;
+
   function showSong(name, html) {
     $("#song-name").text(name);
     $("#song-tab").show().click().text(name);
@@ -15,6 +17,7 @@ $(function() {
     var name = target.text();
     $.get("https://608dev.net/sandbox/sc/kgarner/project/server.py?id=" + id)
       .done(function(result) {
+        songId = id;
         showSong(name, result);
       });
   });
@@ -22,6 +25,7 @@ $(function() {
   $("#windowTabs a.nav-link").on("shown.bs.tab", function(e) {
     if (e.target.id !== "song-tab") {
       $("#song-tab").hide();
+      songId = null;
     }
 
     if (e.target.id === "songs-tab") {
@@ -37,6 +41,30 @@ $(function() {
         });
     }
   });
+
+  $("#score-button").on("click", function(evt) {
+    if (showScores) {
+      $.get("https://608dev.net/sandbox/sc/kgarner/project/score_server.py?songId=" + songId)
+        .done(function(result) {
+          if (result.startsWith("NO RESULTS FOUND")) {
+            alert("Error: no song with id " + songId + " found");
+          }
+
+          console.log(result);
+        }).fail(function(err) {
+          alert("Error: " + err);
+        });
+      $(this).text("Hide scores");
+      $("#scores").html(result).show();
+    } else {
+      showScores = false;
+      $(this).text("Show scores");
+      $("#scores").html("").hide();
+    }
+  });
+
+
+  $("#song-tab").hide();
 
   $("#song-upload").on("submit", function(evt) {
     var data = $("form").serializeArray().reduce(function(total, curr) {
@@ -56,4 +84,4 @@ $(function() {
 
     return false;
   });
-})
+});
