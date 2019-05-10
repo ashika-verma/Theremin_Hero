@@ -49,12 +49,13 @@
           <div class="tab-pane fade" id="song" role="tabpanel" aria-labelledby="song-tab">
             <h4>Song: <span id="song-name"></span></h4>
             <div id="song-content"></div>
-            <div>
               <div class="input-group">
-                <input type="text" class="form-control" placeholder=""/>
-                <div class="input-group-append">
-                  <button type="button" id="score-button" class="btn btn-outline-primary mt-2">
-                      Show scores
+                <div class="btn-group mt-2" role="group" aria-label="score group">
+                  <button type="button" id="score-button" class="btn btn-outline-primary">
+                    Show scores
+                  </button>
+                  <button type="button" id="user-button" class="btn btn-outline-secondary" style="display: none">
+                    Show all scores
                   </button>
                 </div>
               </div>
