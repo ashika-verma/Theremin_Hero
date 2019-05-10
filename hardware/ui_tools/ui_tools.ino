@@ -37,13 +37,13 @@ Button bottomPin(BOT_PIN);
 
 // wifi related vars
 char host[] = "608dev.net";
-const char network[] = "MIT";  //SSID for 6.08 Lab
-const char password[] = ""; //Password for 6.08 Lab
+const char network[] = "6s08";  //SSID for 6.08 Lab
+const char password[] = "iesc6s08"; //Password for 6.08 Lab
 
 const char delim[] = ",;";
 const int notes_freq[] = {262,294,330,349,392,440,494,523};
 
-int find_closest(float freq) {
+int find_closest_idx(float freq) {
   int min_diff = INT32_MAX;
   int best_idx = 0;
 
@@ -55,7 +55,7 @@ int find_closest(float freq) {
     }
   }
 
-  return 8 + best_idx * 20;
+  return best_idx;
 }
 
 // wrapper for handling wifi
@@ -89,19 +89,22 @@ class Note {
   private:
     int x;
     int y;
+    int freq;
 
   public:
-    Note(float literal) {
+    Note(float freq) {
       this->y = 15;
-      this->x = find_closest(literal);
+      int idx = find_closest_idx(freq);
+      this->x = 20 * idx;
+      this->freq = notes_freq[idx];
     }
 
     void draw() {
       if (y > 15) {
-        tft.fillRect(x - 7, y -19, 18, 18, TFT_BLACK);
+        tft.fillRect(x + 1, y -19, 18, 18, TFT_BLACK);
       }
       if (y < 115) {
-        tft.fillRect(x - 7, y + 1, 18, 18, TFT_RED);
+        tft.fillRect(x + 1, y + 1, 18, 18, TFT_RED);
       }
       y += 20;
     }
@@ -112,6 +115,10 @@ class Note {
 
     int get_y() {
       return y;
+    }
+
+    int frequency() {
+      return freq;
     }
 };
 
@@ -194,6 +201,10 @@ void setup() {
   tft.fillScreen(TFT_BLACK);
   tft.setTextColor(TFT_RED, TFT_BLACK);
 
+  ledcSetup(10, 60, 12);
+  ledcAttachPin(13, 10);
+  ledcWrite(10, 4095);
+
   initializeWifi();
 
   char request[100];
@@ -220,6 +231,25 @@ void setup() {
 
 uint8_t state = MENU;
 
+void playNote() {
+  mm = sensor.readRange();
+  older_mm = old_mm;
+  old_mm = mm;
+  
+  avg_mm = ((mm+old_mm+older_mm)/3);
+  avg_mm = map(avg_mm,10,200,-9,3);
+
+  if (avg_mm < -9) {
+    avg_mm = -9;
+  } else if (avg_mm > 3) {
+    avg_mm = 3;
+  }
+
+  avg_mm = 440 * pow(2, avg_mm / 12.0);
+  ledcWriteTone(0, avg_mm);
+  ledcWrite(0,100);
+}
+
 void handleNotes() {
   note_idx++;
 
@@ -232,6 +262,11 @@ void handleNotes() {
   }
 
   if (notes.size() > 0) {
+    if (note_idx > 4 && notes.size() > 1) {
+      playNote();
+      Serial.printf("expected: %d, actual: %d\n", notes.front().frequency(), avg_mm);
+    }
+    
     if (notes.front().get_y() > 115) {
       notes.pop_front();
     }
@@ -239,14 +274,17 @@ void handleNotes() {
 
   if (note_idx >= freqs.size() && notes.size() == 0) {
     tft.fillScreen(TFT_BLACK);
-    state = GET_SONG;
+    state = MENU;
     note_idx = 0;
+    ledcWrite(0,0);
   }
 }
 
 std::string selectionScreenOptions[5] = {"Free Play Mode", "Get Song and Compete", "Record Song"};
 uint8_t selectedOption = 0;
 uint16_t recordCount = 0;
+bool powerSave = false;
+
 
 void handleMainMenu() {
   tft.setCursor(0, 0);
@@ -255,9 +293,18 @@ void handleMainMenu() {
     tft.printf("%s\n", selectionScreenOptions[i].c_str());
   }
 
-  if (topPin.update() != 0) {
+  int top = topPin.update();
+  int bot = bottomPin.update();
+
+
+  if (top == 2 || bot == 2) {
+    powerSave = !powerSave;
+    int value = powerSave ? 511: 4095;
+    ledcWrite(10, value);
+    tft.fillScreen(TFT_BLACK);
+  } else if (top != 0) {
     selectedOption = (selectedOption + 1) % 3;
-  } else if (bottomPin.update() != 0) {
+  } else if (bot!= 0) {
     switch (selectedOption) {
       case 0:
         state = FREE_PLAY;
@@ -282,18 +329,9 @@ void drawFreePlayScreen() {
   tft.println("Free Play Mode!");
   tft.println("");
   tft.println("Press Any Button to Exit to Main Screen");
+
+  playNote();
   
-  mm = sensor.readRange();
-  older_mm = old_mm;
-  old_mm = mm;
-
-  avg_mm = ((mm+old_mm+older_mm)/3);
-
-  avg_mm = map(avg_mm,0,255,262,523);
-
-  ledcWriteTone(0, avg_mm);
-  ledcWrite(0,100);
-
   if (bottomPin.update() != 0 || topPin.update() != 0) {
     selectedOption = 0;
     state = MENU;
@@ -305,17 +343,28 @@ void drawPlayOrReselectScreen() {
   tft.setCursor(0, 0);
   tft.println("Press Upper Button to Start the Game");
   tft.println("Press Lower Button to Go Back to the Song Selection Menu");
+
+  if (topPin.update() != 0) {
+    state = PLAY;
+    tft.fillScreen(TFT_BLACK);
+    drawGameScreen();
+    // other stuff for score -TODO
+  } else if (bottomPin.update() != 0) {
+    state = GET_SONG;
+    tft.fillScreen(TFT_BLACK);
+  }
 }
 
 void drawRecordScreen() {
+  playNote();
+  
   if (recordCount < 150) {
-    mm = sensor.readRange();
-    older_mm = old_mm;
-    old_mm = mm;
-  
-    avg_mm = ((mm+old_mm+older_mm)/3);
-  
-    avg_mm = map(avg_mm,0,255,262,523);
+    recordCount++;
+
+    tft.setCursor(0, 0);
+    float timeLeft = (150 - recordCount) / 10.0;
+    
+    tft.printf("Time remaining: %f seconds\n", timeLeft);
   
     if (old == avg_mm){
       count += 1;
@@ -327,19 +376,16 @@ void drawRecordScreen() {
       strcat(song, output);
       old = avg_mm;
       count = 1;
-      
     }
-
-    ledcWriteTone(0, avg_mm);
-    ledcWrite(0,100);
-    recordCount++;
   }
 
 
-  if (recordCount == 50) {
-    char thing[500];
+  if (recordCount == 150) {
+    ledcWrite(0,0);
+  
+    char thing[1000];
     sprintf(thing, "songName=%s&musicString=%s", "a_banana", song );
-    char request[500];
+    char request[1200];
     sprintf(request,"POST /sandbox/sc/kgarner/project/server.py HTTP/1.1\r\n");
     sprintf(request+strlen(request),"Host: %s\r\n",host);
     strcat(request,"Content-Type: application/x-www-form-urlencoded\r\n");
@@ -347,13 +393,11 @@ void drawRecordScreen() {
     strcat(request,thing);
     do_http_request(host,request,response_buffer,OUT_BUFFER_SIZE, RESPONSE_TIMEOUT,true);
 
-    tft.println(response_buffer);
-    tft.println(request);
+    state = MENU;
   }
 }
 
 void handleGameState() {
-  
   switch (state) {
     case MENU:
       handleMainMenu();
@@ -367,23 +411,9 @@ void handleGameState() {
       break;
     case PLAY_OR_RESELECT:
       drawPlayOrReselectScreen();
-      if (topPin.update() != 0) {
-        state = PLAY;
-        tft.fillScreen(TFT_BLACK);
-        drawGameScreen();
-        // other stuff for score -TODO
-      } else if (bottomPin.update() != 0) {
-        state = GET_SONG;
-        tft.fillScreen(TFT_BLACK);
-      }
       break;
     case PLAY:
       handleNotes();
-      if (bottomPin.update() != 0) {
-        selectedOption = 0;
-        state = MENU;
-        tft.fillScreen(TFT_BLACK);
-      }
       break;
     case RECORD:
       drawRecordScreen();
