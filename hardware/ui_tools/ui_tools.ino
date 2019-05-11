@@ -7,10 +7,11 @@
 #include <list>
 #include <WiFi.h> //Connect to WiFi Network
 #include <Wire.h>
+#include <mpu9255_esp32.h>
 #include "Button.h"
 #include "Adafruit_VL6180X.h"
 
-
+MPU9255 imu; //imu object called, appropriately, imu
 TFT_eSPI tft = TFT_eSPI();  // Invoke library, pins defined in User_Setup.h
 
 const uint8_t LOOP_PERIOD = 100; //milliseconds
@@ -220,6 +221,15 @@ void setup() {
   sensor = Adafruit_VL6180X();
   
   Wire.begin();
+  delay(50);
+  if (imu.setupIMU(1)){ //try to connect to the IMU
+    Serial.println("IMU Connected!");
+  } else{
+    Serial.println("IMU Not Connected :/");
+    Serial.println("Restarting");
+    ESP.restart(); // restart the ESP (proper way)
+  }
+  
   sensor.begin();
   ledcSetup(0,2000,8);
   ledcAttachPin(buzzpin,0);
@@ -514,6 +524,9 @@ void handleSongMenu() {
 }
 
 void loop() {
+  imu.readAccelData(imu.accelCount);
+  float x = imu.accelCount[0]*imu.aRes;
+  Serial.printf("x= %f\n", x);
   primary_timer = millis();
 
   handleGameState();
