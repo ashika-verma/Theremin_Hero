@@ -95,19 +95,19 @@ class Note {
     int freq;
 
   public:
-    Note(float freq) {
-      this->y = 15;
+    Note(float freq, int inp_y = 15) {
+      this->y = inp_y;
       int idx = find_closest_idx(freq);
       this->x = 20 * idx;
       this->freq = notes_freq[idx];
     }
 
-    void draw() {
+    void draw(uint16_t inp_color = TFT_RED) {
       if (y > 15) {
         tft.fillRect(x + 1, y -19, 18, 18, TFT_BLACK);
       }
       if (y < 115) {
-        tft.fillRect(x + 1, y + 1, 18, 18, TFT_RED);
+        tft.fillRect(x + 1, y + 1, 18, 18, inp_color);
       }
       y += 20;
     }
@@ -256,6 +256,8 @@ void playNote() {
   ledcWrite(0,100);
 }
 
+Note note_play = Note(avg_mm, 95);
+
 void handleNotes() {
   note_idx++;
 
@@ -282,6 +284,9 @@ void handleNotes() {
     }
   }
 
+  note_play.draw(TFT_BLACK);
+  note_play = Note(avg_mm, 95);
+  note_play.draw(TFT_BLUE);
   tft.drawString(score_str, 0, 0);
 
   if (note_idx >= freqs.size() && notes.size() == 0) {
