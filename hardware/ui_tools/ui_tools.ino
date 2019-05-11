@@ -231,11 +231,13 @@ void setup() {
 #define PLAY_OR_RESELECT 3
 #define PLAY 4
 #define RECORD 5
+#define SHOW_SCORE 6
 
 uint8_t state = MENU;
 
 int score = 0;
 char score_str[10] = {'0'};
+char songId[15] = {};
 
 void playNote() {
   mm = sensor.readRange();
@@ -286,7 +288,7 @@ void handleNotes() {
 
   if (note_idx >= freqs.size() && notes.size() == 0) {
     tft.fillScreen(TFT_BLACK);
-    state = MENU;
+    state = SHOW_SCORE;
     note_idx = 0;
     ledcWrite(0,0);
   }
@@ -297,6 +299,28 @@ uint8_t selectedOption = 0;
 uint16_t recordCount = 0;
 bool powerSave = false;
 
+void showScore() {
+  tft.setCursor(0, 0);
+  tft.printf("Your score: %d, %s", score, songId);
+  
+  if (bottomPin.update() != 0 || topPin.update() != 0) {
+    selectedOption = 0;
+    state = MENU;
+    tft.fillScreen(TFT_BLACK);
+
+    char thing[1000];
+    sprintf(thing, "userName=bananas&songId=%s&score=%d",songId, score);
+    char request[1200];
+    sprintf(request,"POST /sandbox/sc/kgarner/project/score_server.py HTTP/1.1\r\n");
+    sprintf(request+strlen(request),"Host: %s\r\n",host);
+    strcat(request,"Content-Type: application/x-www-form-urlencoded\r\n");
+    sprintf(request+strlen(request),"Content-Length: %d\r\n\r\n",strlen(thing));
+    strcat(request,thing);
+    do_http_request(host,request,response_buffer,OUT_BUFFER_SIZE, RESPONSE_TIMEOUT,true);
+
+    state = MENU;
+  }
+}
 
 void handleMainMenu() {
   tft.setCursor(0, 0);
@@ -348,6 +372,7 @@ void drawFreePlayScreen() {
     selectedOption = 0;
     state = MENU;
     tft.fillScreen(TFT_BLACK);
+    ledcWrite(0,0);
   }
 }
 
@@ -437,6 +462,9 @@ void handleGameState() {
         tft.fillScreen(TFT_BLACK);
       }
       break;
+    case SHOW_SCORE:
+      showScore();
+      break;
   }
 }
 
@@ -449,6 +477,8 @@ void handleSongMenu() {
   }
 
   if (bottomPin.update() != 0) {
+    sprintf(songId, menu[selectedSong].id.c_str());
+    
     char request[150];
     sprintf(request, "GET /sandbox/sc/kgarner/project/server.py?id=%s&format=esp HTTP/1.1\r\n", menu[selectedSong].id.c_str());
     strcat(request, "Host: 608dev.net\r\n\r\n");
