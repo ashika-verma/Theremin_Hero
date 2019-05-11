@@ -37,8 +37,11 @@ Button bottomPin(BOT_PIN);
 
 // wifi related vars
 char host[] = "608dev.net";
-const char network[] = "6s08";  //SSID for 6.08 Lab
-const char password[] = "iesc6s08"; //Password for 6.08 Lab
+//const char network[] = "6s08";  //SSID for 6.08 Lab
+//const char password[] = "iesc6s08"; //Password for 6.08 Lab
+
+const char network[] = "MIT";  //SSID for 6.08 Lab
+const char password[] = ""; //Password for 6.08 Lab
 
 const char delim[] = ",;";
 const int notes_freq[] = {262,294,330,349,392,440,494,523};
@@ -231,6 +234,9 @@ void setup() {
 
 uint8_t state = MENU;
 
+int score = 0;
+char score_str[10] = {'0'};
+
 void playNote() {
   mm = sensor.readRange();
   older_mm = old_mm;
@@ -266,11 +272,17 @@ void handleNotes() {
       playNote();
       Serial.printf("expected: %d, actual: %d\n", notes.front().frequency(), avg_mm);
     }
-    
+    if (find_closest_idx(notes.front().frequency()) == find_closest_idx(avg_mm)){
+        score += 10;
+        Serial.printf("score: %d\n", score);
+        itoa(score, score_str, 10);
+      }
     if (notes.front().get_y() > 115) {
       notes.pop_front();
     }
   }
+
+  tft.drawString(score_str, 0, 0);
 
   if (note_idx >= freqs.size() && notes.size() == 0) {
     tft.fillScreen(TFT_BLACK);
@@ -346,6 +358,8 @@ void drawPlayOrReselectScreen() {
 
   if (topPin.update() != 0) {
     state = PLAY;
+    score = 0;
+    itoa(score, score_str, 10);
     tft.fillScreen(TFT_BLACK);
     drawGameScreen();
     // other stuff for score -TODO
@@ -489,4 +503,5 @@ void drawGameScreen() {
     tft.drawString(note, x + 8, 118);
   }
   tft.drawString("'", 154, 118);
+  tft.drawString(score_str, 0, 0);
 }
