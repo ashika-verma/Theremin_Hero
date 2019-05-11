@@ -6,6 +6,7 @@
 #include <string>
 #include <list>
 #include <WiFi.h> //Connect to WiFi Network
+#include <WiFiClientSecure.h>
 #include <Wire.h>
 #include <mpu9255_esp32.h>
 #include "Button.h"
@@ -212,7 +213,7 @@ void setup() {
   initializeWifi();
 
   char request[100];
-  sprintf(request, "GET /sandbox/sc/kgarner/project/server.py HTTP/1.1\r\n");
+  sprintf(request, "GET https://608dev.net/sandbox/sc/kgarner/project/server.py HTTP/1.1\r\n");
   strcat(request, "Host: 608dev.net\r\n\r\n");
   do_http_request(host, request, response_buffer, OUT_BUFFER_SIZE, RESPONSE_TIMEOUT, true);
   menu = getEntries(response_buffer);
@@ -326,7 +327,7 @@ void showScore() {
     char thing[1000];
     sprintf(thing, "userName=bananas&songId=%s&score=%d",songId, score);
     char request[1200];
-    sprintf(request,"POST /sandbox/sc/kgarner/project/score_server.py HTTP/1.1\r\n");
+    sprintf(request,"POST https://608dev.net/sandbox/sc/kgarner/project/score_server.py HTTP/1.1\r\n");
     sprintf(request+strlen(request),"Host: %s\r\n",host);
     strcat(request,"Content-Type: application/x-www-form-urlencoded\r\n");
     sprintf(request+strlen(request),"Content-Length: %d\r\n\r\n",strlen(thing));
@@ -440,7 +441,7 @@ void drawRecordScreen() {
     char thing[1000];
     sprintf(thing, "songName=%s&musicString=%s", "a_banana", song );
     char request[1200];
-    sprintf(request,"POST /sandbox/sc/kgarner/project/server.py HTTP/1.1\r\n");
+    sprintf(request,"POST https://608dev.net/sandbox/sc/kgarner/project/server.py HTTP/1.1\r\n");
     sprintf(request+strlen(request),"Host: %s\r\n",host);
     strcat(request,"Content-Type: application/x-www-form-urlencoded\r\n");
     sprintf(request+strlen(request),"Content-Length: %d\r\n\r\n",strlen(thing));
@@ -495,7 +496,7 @@ void handleSongMenu() {
     sprintf(songId, menu[selectedSong].id.c_str());
     
     char request[150];
-    sprintf(request, "GET /sandbox/sc/kgarner/project/server.py?id=%s&format=esp HTTP/1.1\r\n", menu[selectedSong].id.c_str());
+    sprintf(request, "GET https://608dev.net/sandbox/sc/kgarner/project/server.py?id=%s&format=esp HTTP/1.1\r\n", menu[selectedSong].id.c_str());
     strcat(request, "Host: 608dev.net\r\n\r\n");
     do_http_request(host, request, response_buffer, OUT_BUFFER_SIZE, RESPONSE_TIMEOUT, true);
     freqs = parse_song(response_buffer);

@@ -30,8 +30,8 @@ uint8_t char_append(char* buff, char c, uint16_t buff_size) {
  *    void (none)
  */
 void do_http_request(char* host, char* request, char* response, uint16_t response_size, uint16_t response_timeout, uint8_t serial){
-  WiFiClient client; //instantiate a client object
-  if (client.connect(host, 80)) { //try to connect to host on port 80
+  WiFiClientSecure client; //instantiate a client object
+  if (client.connect(host, 443)) { //try to connect to host on port 80
     if (serial) Serial.print(request);//Can do one-line if statements in C without curly braces
     client.print(request);
     memset(response, 0, response_size); //Null out (0 is the value of the null terminator '\0') entire buffer
