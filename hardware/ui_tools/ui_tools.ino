@@ -248,6 +248,7 @@ uint8_t state = MENU;
 int score = 0;
 char score_str[10] = {'0'};
 char songId[15] = {};
+long old_freq = 0;
 
 void playNote() {
   mm = sensor.readRange();
@@ -264,8 +265,11 @@ void playNote() {
   }
 
   avg_mm = 440 * pow(2, avg_mm / 12.0);
-  ledcWriteTone(0, avg_mm);
-  ledcWrite(0,100);
+  if (old_freq != avg_mm) {
+    ledcWriteTone(0, avg_mm);
+    ledcWrite(0,100);
+    old_freq = avg_mm;
+  }
 }
 
 Note note_play = Note(avg_mm, 95);
@@ -382,6 +386,25 @@ void drawFreePlayScreen() {
   tft.println("Press Any Button to Exit to Main Screen");
 
   playNote();
+
+  tft.drawLine(0, 95, 160, 95, TFT_GREEN);
+  tft.drawLine(0, 115, 160, 115, TFT_GREEN);
+
+  char note[5] = "";
+  note[0] = NOTES[0];
+  note[1] = '\0';
+  tft.drawString(note, 8, 118);
+
+  for (int x = 20; x < 160; x += 20) {
+    note[0] = NOTES[x / 20];
+    tft.drawLine(x, 95, x, 115, TFT_GREEN);
+    tft.drawString(note, x + 8, 118);
+  }
+  tft.drawString("'", 154, 118);
+
+  note_play.draw(TFT_BLACK);
+  note_play = Note(avg_mm, 95);
+  note_play.draw(TFT_BLUE);
   
   if (bottomPin.update() != 0 || topPin.update() != 0) {
     selectedOption = 0;
@@ -411,7 +434,26 @@ void drawPlayOrReselectScreen() {
 
 void drawRecordScreen() {
   playNote();
-  
+
+  tft.drawLine(0, 95, 160, 95, TFT_GREEN);
+  tft.drawLine(0, 115, 160, 115, TFT_GREEN);
+
+  char note[5] = "";
+  note[0] = NOTES[0];
+  note[1] = '\0';
+  tft.drawString(note, 8, 118);
+
+  for (int x = 20; x < 160; x += 20) {
+    note[0] = NOTES[x / 20];
+    tft.drawLine(x, 95, x, 115, TFT_GREEN);
+    tft.drawString(note, x + 8, 118);
+  }
+  tft.drawString("'", 154, 118);
+
+  note_play.draw(TFT_BLACK);
+  note_play = Note(avg_mm, 95);
+  note_play.draw(TFT_BLUE);
+
   if (recordCount < 150) {
     recordCount++;
 
@@ -448,6 +490,8 @@ void drawRecordScreen() {
     do_http_request(host,request,response_buffer,OUT_BUFFER_SIZE, RESPONSE_TIMEOUT,true);
 
     state = MENU;
+
+    tft.fillScreen(TFT_BLACK);
   }
 }
 
