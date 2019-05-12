@@ -28,7 +28,7 @@ const uint8_t LOOP_COUNT = 4;
 
 uint32_t primary_timer = 0;
 
-const char NOTES[10] = "CDEFGABC";
+const std::vector<std::string> NOTES = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B", "C" };
 
 // HTTP related vars
 const int RESPONSE_TIMEOUT = 6000; //ms to wait for response from host
@@ -57,23 +57,21 @@ const char password[] = "iesc6s08"; //Password for 6.08 Lab
 //const char password[] = ""; //Password for 6.08 Lab
 
 const char delim[] = ",;";
-const int notes_freq[] = {262,294,330,349,392,440,494,523};
+const int notes_freq[] = {262, 277, 294, 311, 330, 349, 370, 392, 415, 440, 466, 494, 523};
 
 // finds the closest frequency index (linearly) given an input frequency
 // these frequencies are in the range [C3, C4]s
 int find_closest_idx(float freq) {
-  int min_diff = INT32_MAX;
-  int best_idx = 0;
+  int semitone = round(log2(freq / 440.0) * 12.0);  
+  semitone += 9;
 
-  for (int i = 0; i < sizeof(notes_freq)/sizeof(int); i++) {
-    int diff = abs(freq - notes_freq[i]);
-    if (diff < min_diff) {
-      min_diff = diff;
-      best_idx = i;
-    }
+  if (semitone < 0) {
+    return 0;
+  } else if (semitone >= NOTES.size()) {
+    return NOTES.size() - 1;
+  } else {
+    return semitone;
   }
-
-  return best_idx;
 }
 
 // wrapper for handling wifi
@@ -120,7 +118,7 @@ class Note {
     Note(float freq, int inp_y = 15) {
       this->y = inp_y;
       int idx = find_closest_idx(freq);
-      this->x = 20 * idx;
+      this->x = 12 * idx;
       this->freq = notes_freq[idx];
     }
 
@@ -129,10 +127,10 @@ class Note {
     // down 20 pixels
     void draw(uint16_t inp_color = TFT_RED) {
       if (y > 15) {
-        tft.fillRect(x + 1, y -19, 18, 18, TFT_BLACK);
+        tft.fillRect(x + 1, y -19, 10, 18, TFT_BLACK);
       }
       if (y < 115) {
-        tft.fillRect(x + 1, y + 1, 18, 18, inp_color);
+        tft.fillRect(x + 1, y + 1, 10, 18, inp_color);
       }
       y += 20;
     }
@@ -396,20 +394,22 @@ void handleNotes() {
 
           // score the current note with what is being played
       int expected_note = find_closest_idx(notes.front().frequency());
+      int actual_note = find_closest_idx(avg_mm);
 
       int lowPixel = expected_note * 2;
       int highPixel = lowPixel + 3;
 
-      Serial.println(lowPixel);
 
-      
       strip.SetPixelColor(lowPixel,RgbColor(0, 255, 255) );
       strip.SetPixelColor(highPixel,RgbColor(0, 255, 255) );
       strip.Show();
+
+      Serial.printf("Expected: (%d, %d), Actual: (%d, %d)\n", expected_note, 
+        notes.front().frequency(), avg_mm, actual_note);
+
       
-      if (expected_note == find_closest_idx(avg_mm)) {
+      if (expected_note == actual_note) {
         score += 10;
-        Serial.printf("score: %d\n", score);
         itoa(score, score_str, 10);
       }
     }
@@ -531,17 +531,11 @@ void drawFreePlayScreen() {
   tft.drawLine(0, 95, 160, 95, TFT_GREEN);
   tft.drawLine(0, 115, 160, 115, TFT_GREEN);
 
-  char note[5] = "";
-  note[0] = NOTES[0];
-  note[1] = '\0';
-  tft.drawString(note, 8, 118);
-
-  for (int x = 20; x < 160; x += 20) {
-    note[0] = NOTES[x / 20];
+  for (int i = 0; i < NOTES.size(); i++) {
+    int x = i * 12;
+    tft.drawString(NOTES[i].c_str(), x + 1, 118);
     tft.drawLine(x, 95, x, 115, TFT_GREEN);
-    tft.drawString(note, x + 8, 118);
   }
-  tft.drawString("'", 154, 118);
 
   note_play.draw(TFT_BLACK);
   note_play = Note(avg_mm, 95);
@@ -588,17 +582,11 @@ void drawRecordScreen() {
   tft.drawLine(0, 95, 160, 95, TFT_GREEN);
   tft.drawLine(0, 115, 160, 115, TFT_GREEN);
 
-  char note[5] = "";
-  note[0] = NOTES[0];
-  note[1] = '\0';
-  tft.drawString(note, 8, 118);
-
-  for (int x = 20; x < 160; x += 20) {
-    note[0] = NOTES[x / 20];
+  for (int i = 0; i < NOTES.size(); i++) {
+    int x = i * 12;
+    tft.drawString(NOTES[i].c_str(), x + 1, 118);
     tft.drawLine(x, 95, x, 115, TFT_GREEN);
-    tft.drawString(note, x + 8, 118);
   }
-  tft.drawString("'", 154, 118);
 
   note_play.draw(TFT_BLACK);
   note_play = Note(avg_mm, 95);
@@ -737,16 +725,12 @@ void drawGameScreen() {
   tft.drawLine(0, 95, 160, 95, TFT_GREEN);
   tft.drawLine(0, 115, 160, 115, TFT_GREEN);
 
-  char note[5] = "";
-  note[0] = NOTES[0];
-  note[1] = '\0';
-  tft.drawString(note, 8, 118);
-
-  for (int x = 20; x < 160; x += 20) {
-    note[0] = NOTES[x / 20];
+  for (int i = 0; i < NOTES.size(); i++) {
+    int x = i * 12;
+    tft.drawString(NOTES[i].c_str(), x + 1, 118);
     tft.drawLine(x, 0, x, 115, TFT_GREEN);
-    tft.drawString(note, x + 8, 118);
   }
+
   tft.drawString("'", 154, 118);
   tft.drawString(score_str, 0, 0);
 }
