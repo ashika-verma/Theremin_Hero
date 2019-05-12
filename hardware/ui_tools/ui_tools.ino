@@ -1,4 +1,3 @@
-#include<math.h>
 #include<string.h>
 #include <TFT_eSPI.h> // Graphics and font library for ST7735 driver chip
 #include <SPI.h>
@@ -11,9 +10,17 @@
 #include <mpu9255_esp32.h>
 #include "Button.h"
 #include "Adafruit_VL6180X.h"
+#include <NeoPixelBus.h>
+#include <NeoPixelAnimator.h>
+#include <math.h>
 
 MPU9255 imu; //imu object called, appropriately, imu
 TFT_eSPI tft = TFT_eSPI();  // Invoke library, pins defined in User_Setup.h
+
+const uint16_t PixelCount = 120; // make sure to set this to the number of pixels in your strip
+const uint8_t PixelPin = 14;  // make sure to set this to the correct pin, ignored for Esp8266
+
+NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod> strip(PixelCount, PixelPin);
 
 const uint8_t LOOP_PERIOD = 100; // milliseconds
 // the number of loop cycles a single note should take when playing a song
@@ -167,6 +174,10 @@ std::vector<float> parse_song(char* input_song) {
   return output;
 }
 
+int min(int a, int b) {
+  return a < b ? a: b;
+}
+
 // a struct for storing a song id and name
 struct SongEntry {
   std::string id;
@@ -241,6 +252,10 @@ void setup() {
 
   initializeWifi();
 
+  // bbegin LEDs
+  strip.Begin();
+  strip.Show();
+
   // get the list of possible songs from the server
   char request[100];
   sprintf(request, "GET https://608dev.net/sandbox/sc/kgarner/project/server.py HTTP/1.1\r\n");
@@ -284,6 +299,8 @@ char score_str[10] = {'0'};
 char songId[15] = {};
 long old_freq = 0;
 
+
+
 // plays a note from the sensor and updates the current value
 void playNote() {
   mm = sensor.readRange();
@@ -301,6 +318,17 @@ void playNote() {
   } else if (avg_mm > 3) {
     avg_mm = 3;
   }
+
+  for (int i = 0; i < PixelCount; i++) {
+    strip.SetPixelColor(i, RgbColor(0, 0, 0));
+  }
+
+  int pixelIdx = (avg_mm + 9) * 2 + 1;
+  
+  strip.SetPixelColor(pixelIdx,RgbColor(255, 0, 255) );
+  strip.SetPixelColor(pixelIdx + 1,RgbColor(255, 0, 255) );
+
+  strip.Show();
 
   // scale to frequency using power and play song
   avg_mm = 440 * pow(2, avg_mm / 12.0);
@@ -335,27 +363,27 @@ void handleNotes() {
     // have we started playing a note? if so, play the note
     if (note_idx > 4 && notes.size() > 1) {
       playNote();
-<<<<<<< Updated upstream
-    }
-
-    // score the current note with what is being played
-    if (find_closest_idx(notes.front().frequency()) == find_closest_idx(avg_mm)) {
-      score += 10;
-      Serial.printf("score: %d\n", score);
-      itoa(score, score_str, 10);
-    }
-
-=======
 
           // score the current note with what is being played
-      if (find_closest_idx(notes.front().frequency()) == find_closest_idx(avg_mm)) {
+      int expected_note = find_closest_idx(notes.front().frequency());
+
+      int lowPixel = expected_note * 2;
+      int highPixel = lowPixel + 3;
+
+      Serial.println(lowPixel);
+
+      
+      strip.SetPixelColor(lowPixel,RgbColor(0, 255, 255) );
+      strip.SetPixelColor(highPixel,RgbColor(0, 255, 255) );
+      strip.Show();
+      
+      if (expected_note == find_closest_idx(avg_mm)) {
         score += 10;
         Serial.printf("score: %d\n", score);
         itoa(score, score_str, 10);
       }
     }
     
->>>>>>> Stashed changes
     // remove Notes that have expired
     if (notes.front().get_y() > 115) {
       notes.pop_front();
@@ -398,15 +426,9 @@ void showScore() {
     tft.fillScreen(TFT_BLACK);
 
     // post the score to the server
-<<<<<<< Updated upstream
-    char thing[150];
-    sprintf(thing, "userName=bananas&songId=%s&score=%d",songId, score);
-    char request[200];
-=======
     char thing[200];
     sprintf(thing, "userName=bananas&songId=%s&score=%d",songId, score);
     char request[300];
->>>>>>> Stashed changes
     sprintf(request,"POST https://608dev.net/sandbox/sc/kgarner/project/score_server.py HTTP/1.1\r\n");
     sprintf(request+strlen(request),"Host: %s\r\n",host);
     strcat(request,"Content-Type: application/x-www-form-urlencoded\r\n");
@@ -664,7 +686,6 @@ void handleSongMenu() {
 void loop() {
   imu.readAccelData(imu.accelCount);
   float x = imu.accelCount[0]*imu.aRes;
-//  Serial.printf("x= %f\n", x);
   primary_timer = millis();
 
   handleGameState();
