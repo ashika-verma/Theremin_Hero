@@ -42,11 +42,9 @@ Button bottomPin(BOT_PIN);
 
 // wifi related vars
 char host[] = "608dev.net";
-//const char network[] = "6s08";  //SSID for 6.08 Lab
-//const char password[] = "iesc6s08"; //Password for 6.08 Lab
 
-const char network[] = "MIT";  //SSID for 6.08 Lab
-const char password[] = ""; //Password for 6.08 Lab
+const char network[] = "6s08";  //SSID for 6.08 Lab
+const char password[] = "iesc6s08"; //Password for 6.08 Lab
 
 const char delim[] = ",;";
 const int notes_freq[] = {262,294,330,349,392,440,494,523};
@@ -337,6 +335,7 @@ void handleNotes() {
     // have we started playing a note? if so, play the note
     if (note_idx > 4 && notes.size() > 1) {
       playNote();
+<<<<<<< Updated upstream
     }
 
     // score the current note with what is being played
@@ -346,6 +345,17 @@ void handleNotes() {
       itoa(score, score_str, 10);
     }
 
+=======
+
+          // score the current note with what is being played
+      if (find_closest_idx(notes.front().frequency()) == find_closest_idx(avg_mm)) {
+        score += 10;
+        Serial.printf("score: %d\n", score);
+        itoa(score, score_str, 10);
+      }
+    }
+    
+>>>>>>> Stashed changes
     // remove Notes that have expired
     if (notes.front().get_y() > 115) {
       notes.pop_front();
@@ -388,9 +398,15 @@ void showScore() {
     tft.fillScreen(TFT_BLACK);
 
     // post the score to the server
+<<<<<<< Updated upstream
     char thing[150];
     sprintf(thing, "userName=bananas&songId=%s&score=%d",songId, score);
     char request[200];
+=======
+    char thing[200];
+    sprintf(thing, "userName=bananas&songId=%s&score=%d",songId, score);
+    char request[300];
+>>>>>>> Stashed changes
     sprintf(request,"POST https://608dev.net/sandbox/sc/kgarner/project/score_server.py HTTP/1.1\r\n");
     sprintf(request+strlen(request),"Host: %s\r\n",host);
     strcat(request,"Content-Type: application/x-www-form-urlencoded\r\n");
@@ -648,7 +664,7 @@ void handleSongMenu() {
 void loop() {
   imu.readAccelData(imu.accelCount);
   float x = imu.accelCount[0]*imu.aRes;
-  Serial.printf("x= %f\n", x);
+//  Serial.printf("x= %f\n", x);
   primary_timer = millis();
 
   handleGameState();
