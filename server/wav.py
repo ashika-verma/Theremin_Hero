@@ -9,10 +9,29 @@ block_length = .1 # in seconds, may be float
 
 
 def create_sample(frequency: float, start: float, end: float):
+  """
+  Creates a sine wave at the frequency, frequency, with inputs
+  in the range [start, end]
+
+  Arguments:
+    - frequency (float): the frequency for this start wave
+    - start (float): the starting input (x) for the wave
+    - end (float): the ending x for this wave
+  """
   return np.sin(2 * np.pi * np.arange(start, end) * frequency / fs)
 
 
 def create_song(notes: list):
+  """
+  Creates a new song as a numpy array from a notes list. 
+  This notes list is in the following format:
+
+  notes ::= (INT "," INT)*
+  INT ::= [0-9]+
+
+  The first integer is a frequency, and the second corresponds
+  to its duration in 100ms intervals.
+  """
   song = []
   last_angle, start = 0.0, 0.0
 
@@ -39,6 +58,13 @@ def create_song(notes: list):
 
 
 def write_song_from_string(name: str, song: str):
+  """
+  Creates an OGG file from a notes string. 
+
+  Arguments:
+    - name (string): the name of the file to be written
+    - song (string): the song contents
+  """
   if song.endswith(";"):
     song = song[:-1]
     
