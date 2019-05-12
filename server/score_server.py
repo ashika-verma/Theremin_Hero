@@ -4,6 +4,16 @@ import datetime
 song_db = "__HOME__/songs.db"
 
 def handle_post(request):
+    """
+    Handles a POST request to server/score_server.py. Expects
+    the following arguments:
+        - userName (str): a string corresponding 
+        - songId (int): the id of an existing song
+        - score (int): the score for this song
+
+    If the arguments are valid, creates a new score entry with 
+    a name, userName, pointing to a song songId, with a score, score
+    """
     conn = sqlite3.connect(song_db)
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS score_table (songId INTEGER, 
@@ -28,6 +38,16 @@ def handle_post(request):
     return "SUCCESS"
 
 def handle_get(request):
+    """
+    Handles retrieving score(s) for a song. If there is
+    a userName, returns the highest score for the user 
+    for the specified song. Otherwise, returns all the 
+
+    Arguments:
+        - songId (int): the id of the song we are searching
+        - userName (optional string): the name of the user for
+          whom we wish to get the highest score.
+    """
     conn = sqlite3.connect(song_db)
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS score_table (songId INTEGER, 
@@ -55,4 +75,7 @@ def handle_get(request):
         return "NO RESULTS FOUND" if len(result) == 0 else result
 
 def request_handler(request):
+    """
+    A general request handler for the score server
+    """
     return handle_post(request) if request['method'] == 'POST' else handle_get(request)
