@@ -2,6 +2,10 @@
 #define Button_h
 #include "Arduino.h"
 
+/**
+ * A classy button class that abstracts away 
+ * the logic for handling a button click. 
+ */
 class Button {
   private:
     uint32_t t_of_state_2;

@@ -1,6 +1,7 @@
 #include "Arduino.h"
 #include "Button.h"
 
+// Creates a new button for the pin, p
 Button::Button(int p) {
   flag = 0;
   state = 0;
@@ -12,11 +13,16 @@ Button::Button(int p) {
   button_pressed = 0;
 }
 
+// reads the current value of the button 
+// and updates this state
 void Button::read() {
   uint8_t button_state = digitalRead(pin);
   button_pressed = !button_state;
 }
 
+// updates the current state of this button
+// returns 0 on no press, 1 on short press, 
+// or 2 on long press
 int Button::update() {
   read();
   flag = 0;
