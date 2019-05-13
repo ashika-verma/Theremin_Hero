@@ -498,8 +498,10 @@ void drawFreePlayScreen() {
   tft.drawLine(0, 115, 160, 115, TFT_GREEN);
 
   for (int i = 0; i < NOTES.size(); i++) {
+    std::string note = NOTES[i];
     int x = i * 12;
-    tft.drawString(NOTES[i].c_str(), x + 1, 118);
+    int change = note.length() == 2 ? 0: 2;    
+    tft.drawString(NOTES[i].c_str(), x + change, 118);
     tft.drawLine(x, 95, x, 115, TFT_GREEN);
   }
 
@@ -545,8 +547,10 @@ void drawRecordScreen() {
   tft.drawLine(0, 115, 160, 115, TFT_GREEN);
 
   for (int i = 0; i < NOTES.size(); i++) {
+    std::string note = NOTES[i];
     int x = i * 12;
-    tft.drawString(NOTES[i].c_str(), x + 1, 118);
+    int change = note.length() == 2 ? 0: 2;    
+    tft.drawString(NOTES[i].c_str(), x + change, 118);
     tft.drawLine(x, 95, x, 115, TFT_GREEN);
   }
 
@@ -687,8 +691,10 @@ void drawGameScreen() {
   tft.drawLine(0, 115, 160, 115, TFT_GREEN);
 
   for (int i = 0; i < NOTES.size(); i++) {
+    std::string note = NOTES[i];
     int x = i * 12;
-    tft.drawString(NOTES[i].c_str(), x + 1, 118);
+    int change = note.length() == 2 ? 0: 2;    
+    tft.drawString(NOTES[i].c_str(), x + change, 118);
     tft.drawLine(x, 0, x, 115, TFT_GREEN);
   }
 
