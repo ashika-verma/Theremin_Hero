@@ -53,6 +53,9 @@ char host[] = "608dev.net";
 const char network[] = "6s08";  //SSID for 6.08 Lab
 const char password[] = "iesc6s08"; //Password for 6.08 Lab
 
+//const char network[] = "MIT";  //SSID for 6.08 Lab
+//const char password[] = ""; //Password for 6.08 Lab
+
 const char delim[] = ",;";
 const int notes_freq[] = {262, 277, 294, 311, 330, 349, 370, 392, 415, 440, 466, 494, 523};
 
@@ -297,37 +300,46 @@ char score_str[10] = {'0'};
 char songId[15] = {};
 long old_freq = 0;
 
+//for if the player wants to hear the song
+bool listen_song = false;
+
 // plays a note from the sensor and updates the current value
-void playNote() {
-  mm = sensor.readRange();
-  older_mm = old_mm;
-  old_mm = mm;
+void playNote(int inp_freq = 0) {
+  if (listen_song == false){
+    mm = sensor.readRange();
+    older_mm = old_mm;
+    old_mm = mm;
+    
+    // get an input from TOF and wrap it in the range C3 to C4
+    // for all the semitones
+    avg_mm = ((mm+old_mm+older_mm)/3);
+    avg_mm = map(avg_mm,10,200,-9,3);
   
-  // get an input from TOF and wrap it in the range C3 to C4
-  // for all the semitones
-  avg_mm = ((mm+old_mm+older_mm)/3);
-  avg_mm = map(avg_mm,10,200,-9,3);
+    // scale the range
+    if (avg_mm < -9) {
+      avg_mm = -9;
+    } else if (avg_mm > 3) {
+      avg_mm = 3;
+    }
 
-  // scale the range
-  if (avg_mm < -9) {
-    avg_mm = -9;
-  } else if (avg_mm > 3) {
-    avg_mm = 3;
-  }
-
-  for (int i = 0; i < PixelCount; i++) {
-    strip.SetPixelColor(i, RgbColor(0, 0, 0));
-  }
-
-  int pixelIdx = (avg_mm + 9) * 2 + 1;
+    for (int i = 0; i < PixelCount; i++) {
+      strip.SetPixelColor(i, RgbColor(0, 0, 0));
+    }
   
-  strip.SetPixelColor(pixelIdx,RgbColor(255, 0, 255) );
-  strip.SetPixelColor(pixelIdx + 1,RgbColor(255, 0, 255) );
+    int pixelIdx = (avg_mm + 9) * 2 + 1;
+    
+    strip.SetPixelColor(pixelIdx,RgbColor(255, 0, 255) );
+    strip.SetPixelColor(pixelIdx + 1,RgbColor(255, 0, 255) );
+  
+    strip.Show();
 
-  strip.Show();
-
-  // scale to frequency using power and play song
-  avg_mm = 440 * pow(2, avg_mm / 12.0);
+    // scale to frequency using power and play song
+    avg_mm = 440 * pow(2, avg_mm / 12.0);
+  }
+  
+  else{
+    avg_mm = inp_freq;
+  }
   
   if (old_freq != avg_mm) {
     ledcWriteTone(0, avg_mm);
@@ -352,13 +364,32 @@ void handleNotes() {
   // draw all of the notes
   for (Note &note : notes) {
     note.draw();
+    if (note.get_y() == 95 && listen_song == true){
+      playNote(note.frequency());
+
+      for (int i = 0; i < PixelCount; i++) {
+        strip.SetPixelColor(i, RgbColor(0, 0, 0));
+      }
+
+      int expected_note = find_closest_idx(note.frequency());
+
+      int lowPixel = expected_note * 2;
+      int highPixel = lowPixel + 3;
+
+      Serial.println(lowPixel);
+
+      
+      strip.SetPixelColor(lowPixel,RgbColor(255, 0, 0) );
+      strip.SetPixelColor(highPixel,RgbColor(255, 0, 0) );
+      strip.Show();
+    }
   }
 
   // while we have notes
   if (notes.size() > 0) {
 
     // have we started playing a note? if so, play the note
-    if (note_idx > 4 && notes.size() > 1) {
+    if (note_idx > 4 && notes.size() > 1 && listen_song == false) {
       playNote();
 
           // score the current note with what is being played
@@ -389,17 +420,20 @@ void handleNotes() {
     }
   }
 
-  // move the note to the current location we are playing
-  note_play.draw(TFT_BLACK);
-  note_play = Note(avg_mm, 95);
-  note_play.draw(TFT_BLUE);
-  tft.drawString(score_str, 0, 0);
+  if (listen_song == false){
+    // move the note to the current location we are playing
+    note_play.draw(TFT_BLACK);
+    note_play = Note(avg_mm, 95);
+    note_play.draw(TFT_BLUE);
+    tft.drawString(score_str, 0, 0); 
+  }
 
   // if all the notes are done, go to show score mode
   if (note_idx >= freqs.size() && notes.size() == 0) {
     tft.fillScreen(TFT_BLACK);
     state = SHOW_SCORE;
     note_idx = 0;
+    listen_song = false;
     ledcWrite(0,0);
   }
 }
@@ -521,11 +555,15 @@ void drawFreePlayScreen() {
 // prompts the user to start playing a song, or go back
 void drawPlayOrReselectScreen() {
   tft.setCursor(0, 0);
-  tft.println("Press Upper Button to Start the Game");
+  tft.println("Short Press Upper Button to Start the Game. Long Press Upper Button to Listen to Song");
   tft.println("Press Lower Button to Go Back to the Song Selection Menu");
 
   // start a song
-  if (topPin.update() != 0) {
+  int top_press = topPin.update();
+  if (top_press != 0) {
+    if (top_press == 2){
+      listen_song = true;
+    }
     state = PLAY;
     score = 0;
     itoa(score, score_str, 10);
@@ -558,6 +596,7 @@ void drawRecordScreen() {
   note_play = Note(avg_mm, 95);
   note_play.draw(TFT_BLUE);
 
+  //are we done yet???
   if (recordCount < 150) {
     recordCount++;
 
