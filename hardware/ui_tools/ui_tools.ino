@@ -59,6 +59,11 @@ const char password[] = "iesc6s08"; //Password for 6.08 Lab
 const char delim[] = ",;";
 const int notes_freq[] = {262, 277, 294, 311, 330, 349, 370, 392, 415, 440, 466, 494, 523};
 
+char userName[50]; // username to be associated with scores and uploaded songs
+char songName[50]; // songname to be associated with a newly recorded song
+
+uint8_t saved = 0; // for use by NameGetter objects to signal end of name entry
+
 // finds the closest frequency index (linearly) given an input frequency
 // these frequencies are in the range [C3, C4]s
 int find_closest_idx(float freq) {
@@ -100,6 +105,93 @@ void initializeWifi() {
 
   Wire.begin();
 }
+
+//used to get x,y values from IMU accelerometer!
+void get_angle(float* x, float* y) {
+  imu.readAccelData(imu.accelCount);
+  *x = imu.accelCount[0] * imu.aRes;
+  *y = imu.accelCount[1] * imu.aRes;
+}
+
+class NameGetter {
+  private:
+    char alphabet[50] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    char entered_name[50] = {0};
+    int char_index;
+    int name_state;
+    unsigned long scrolling_timer;
+    const int scrolling_threshold = 150;
+    const float angle_threshold = 0.3;
+    char type[10];
+
+  public:
+    NameGetter(const char* nameType) { // nameType: either "Song" or "User"
+      name_state = 0;
+      char_index = 0;
+      scrolling_timer = millis();
+      sprintf(type, nameType);
+    }
+    void get_name(char* output) {
+      // writes the name entered through the imu in output
+      sprintf(output, entered_name);
+      memset(entered_name, 0, sizeof(entered_name));
+    }
+    void update(float angle, int button, char* output) {
+      // handles the state of character selection
+      switch (name_state) {
+        case 0:
+          if (button == 2) {
+            char_index = 0;
+            scrolling_timer = millis();
+            name_state = 1;
+          }
+          sprintf(output, "Long Press to Enter %s Name!", type);
+          return;
+          break;
+        case 1:
+          if (button == 1) {
+            strncat(entered_name, alphabet + char_index, 1);
+            char_index = 0;
+            memset(output, 0, sizeof(output));
+            strcat(output, entered_name);
+            strncat(output, alphabet, 1);
+            return;
+          } else if (button == 2) {
+            name_state = 2;
+            memset(output, 0, sizeof(output));
+            return;
+          } else {
+            if (angle < -1 * angle_threshold && millis() - scrolling_timer > scrolling_threshold) {
+              if (char_index == 0) char_index = strlen(alphabet);
+              char_index--;
+              scrolling_timer = millis();
+            } else if (angle > angle_threshold && millis() - scrolling_timer > scrolling_threshold) {
+              char_index++;
+              char_index %= strlen(alphabet);
+              scrolling_timer = millis();
+            }
+            memset(output, 0, sizeof(output));
+            strcat(output, entered_name);
+            strncat(output, alphabet + char_index, 1);
+            return; 
+          }
+          break;
+        case 2:
+          if (button == 2) {
+            memset(output, 0, sizeof(output));
+            name_state = 0;
+            saved = 1;
+            return;
+          } else {
+            sprintf(output, "Name Entered Successfully!\n\nLong Press to Save..");
+            return;
+          }
+      }
+    }
+};
+
+NameGetter userNameGetter("User"); // NameGetter object for username entry
+NameGetter songNameGetter("Song"); // NameGetter object for song name entry
 
 /**
  * A class corresponding to a note block, with 
@@ -291,8 +383,10 @@ void setup() {
 #define PLAY 4
 #define RECORD 5
 #define SHOW_SCORE 6
+#define SONG_NAME_ENTRY 7
+#define USERNAME_ENTRY 8
 
-uint8_t state = MENU;
+uint8_t state = USERNAME_ENTRY;
 
 // keeps track of consistent state (score, selected song)
 int score = 0;
@@ -460,7 +554,7 @@ void showScore() {
 
     // post the score to the server
     char thing[200];
-    sprintf(thing, "userName=bananas&songId=%s&score=%d",songId, score);
+    sprintf(thing, "userName=%s&songId=%s&score=%d", userName, songId, score);
     char request[300];
     sprintf(request,"POST https://608dev.net/sandbox/sc/kgarner/project/score_server.py HTTP/1.1\r\n");
     sprintf(request+strlen(request),"Host: %s\r\n",host);
@@ -622,26 +716,83 @@ void drawRecordScreen() {
 
   // when we are done, post
   if (recordCount == 150) {
+    state = SONG_NAME_ENTRY;
     ledcWrite(0,0);
-  
-    char thing[1000];
-    sprintf(thing, "songName=%s&musicString=%s", "a_banana", song );
+  }
+}
+
+char songEntryResponse[100];
+char oldSongEntryResponse[100];
+
+// handles imu tilting to enter a name for the newly recorded song
+void handleSongNameEntry() {
+  float x, y;
+  get_angle(&x, &y); //get angle values
+  int bv = topPin.update(); //get button value
+  songNameGetter.update(-y, bv, songEntryResponse);
+
+  if (strcmp(songEntryResponse, oldSongEntryResponse) != 0) {
+    tft.fillScreen(TFT_BLACK);
+    tft.setCursor(0, 0, 1);
+    tft.println(songEntryResponse);
+  }
+  memset(oldSongEntryResponse, 0, sizeof(oldSongEntryResponse));
+  strcat(oldSongEntryResponse, songEntryResponse);
+
+  if (saved) {
+    saved = 0;
+    songNameGetter.get_name(songName);
+
+    tft.fillScreen(TFT_BLACK);
+    tft.setCursor(0, 0);
+    tft.println("Uploading..");
+    
+    char post_string[1000];
+    sprintf(post_string, "songName=%s&musicString=%s", songName, song);
     char request[1200];
     sprintf(request,"POST https://608dev.net/sandbox/sc/kgarner/project/server.py HTTP/1.1\r\n");
     sprintf(request+strlen(request),"Host: %s\r\n",host);
     strcat(request,"Content-Type: application/x-www-form-urlencoded\r\n");
-    sprintf(request+strlen(request),"Content-Length: %d\r\n\r\n",strlen(thing));
-    strcat(request,thing);
+    sprintf(request+strlen(request),"Content-Length: %d\r\n\r\n",strlen(post_string));
+    strcat(request,post_string);
     do_http_request(host,request,response_buffer,OUT_BUFFER_SIZE, RESPONSE_TIMEOUT,true);
-
-    state = MENU;
-
     tft.fillScreen(TFT_BLACK);
+  
+    state = MENU; 
+  }
+}
+
+char userEntryResponse[100];
+char oldUserEntryResponse[100];
+
+// handles imu tilting to enter a username once the hardware code uploads
+void handleUserNameEntry() {
+  float x, y;
+  get_angle(&x, &y); //get angle values
+  int bv = topPin.update(); //get button value
+  userNameGetter.update(-y, bv, userEntryResponse);
+
+  if (strcmp(userEntryResponse, oldUserEntryResponse) != 0) {
+    tft.fillScreen(TFT_BLACK);
+    tft.setCursor(0, 0, 1);
+    tft.println(userEntryResponse);
+  }
+  memset(oldUserEntryResponse, 0, sizeof(oldUserEntryResponse));
+  strcat(oldUserEntryResponse, userEntryResponse);
+
+  if (saved) {
+    saved = 0;
+    userNameGetter.get_name(userName);
+    tft.fillScreen(TFT_BLACK);
+    state = MENU;
   }
 }
 
 void handleGameState() {
   switch (state) {
+    case USERNAME_ENTRY:
+      handleUserNameEntry();
+      break;
     case MENU:
       handleMainMenu();
       break;
@@ -665,6 +816,9 @@ void handleGameState() {
         state = MENU;
         tft.fillScreen(TFT_BLACK);
       }
+      break;
+    case SONG_NAME_ENTRY:
+      handleSongNameEntry();
       break;
     case SHOW_SCORE:
       showScore();
