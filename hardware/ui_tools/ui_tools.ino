@@ -329,7 +329,7 @@ void setup() {
 
   // begin TFT
   tft.init();
-  tft.setRotation(1);
+  tft.setRotation(3);
   tft.setTextSize(1);
   tft.fillScreen(TFT_BLACK);
   tft.setTextColor(TFT_RED, TFT_BLACK);
@@ -407,7 +407,7 @@ void playNote(int inp_freq = 0) {
     // get an input from TOF and wrap it in the range C3 to C4
     // for all the semitones
     avg_mm = ((mm+old_mm+older_mm)/3);
-    avg_mm = map(avg_mm,10,200,-9,3);
+    avg_mm = map(avg_mm,0,200,-9,3);
   
     // scale the range
     if (avg_mm < -9) {
@@ -748,7 +748,7 @@ void handleSongNameEntry() {
     tft.println("Uploading..");
     
     char post_string[1000];
-    sprintf(post_string, "songName=%s&musicString=%s", songName, song);
+    sprintf(post_string, "songName=%s&musicString=%s&format=esp", songName, song);
     char request[1200];
     sprintf(request,"POST https://608dev.net/sandbox/sc/kgarner/project/server.py HTTP/1.1\r\n");
     sprintf(request+strlen(request),"Host: %s\r\n",host);
@@ -811,11 +811,6 @@ void handleGameState() {
       break;
     case RECORD:
       drawRecordScreen();
-      if (bottomPin.update() != 0) {
-        selectedOption = 0;
-        state = MENU;
-        tft.fillScreen(TFT_BLACK);
-      }
       break;
     case SONG_NAME_ENTRY:
       handleSongNameEntry();

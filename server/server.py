@@ -59,7 +59,10 @@ def handle_post(request):
     finally:
         conn.close()
 
-    return read_song(songName, id)
+    if request['form'].get("format") == "esp":
+        return "OK"
+    else:
+        return read_song(songName, id)
 
 def handle_get(request):
     """
