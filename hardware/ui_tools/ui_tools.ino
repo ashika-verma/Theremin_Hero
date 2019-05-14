@@ -1,4 +1,3 @@
-#include<string.h>
 #include <TFT_eSPI.h> // Graphics and font library for ST7735 driver chip
 #include <SPI.h>
 #include <vector>
@@ -10,7 +9,7 @@
 #include <mpu9255_esp32.h>
 #include "Button.h"
 #include "Adafruit_VL6180X.h"
-#include <NeoPixelBus.h>
+#include <NeoPixelBrightnessBus.h>
 #include <NeoPixelAnimator.h>
 #include <math.h>
 
@@ -20,7 +19,7 @@ TFT_eSPI tft = TFT_eSPI();  // Invoke library, pins defined in User_Setup.h
 const uint16_t PixelCount = 120; // make sure to set this to the number of pixels in your strip
 const uint8_t PixelPin = 14;  // make sure to set this to the correct pin, ignored for Esp8266
 
-NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod> strip(PixelCount, PixelPin);
+NeoPixelBrightnessBus<NeoGrbFeature, Neo800KbpsMethod> strip(PixelCount, PixelPin);
 
 const uint8_t LOOP_PERIOD = 100; // milliseconds
 // the number of loop cycles a single note should take when playing a song
@@ -50,11 +49,11 @@ Button bottomPin(BOT_PIN);
 // wifi related vars
 char host[] = "608dev.net";
 
-const char network[] = "6s08";  //SSID for 6.08 Lab
-const char password[] = "iesc6s08"; //Password for 6.08 Lab
+//const char network[] = "6s08";  //SSID for 6.08 Lab
+//const char password[] = "iesc6s08"; //Password for 6.08 Lab
 
-//const char network[] = "MIT";  //SSID for 6.08 Lab
-//const char password[] = ""; //Password for 6.08 Lab
+const char network[] = "MIT";  //SSID for 6.08 Lab
+const char password[] = ""; //Password for 6.08 Lab
 
 const char delim[] = ",;";
 const int notes_freq[] = {262, 277, 294, 311, 330, 349, 370, 392, 415, 440, 466, 494, 523};
@@ -397,6 +396,14 @@ long old_freq = 0;
 //for if the player wants to hear the song
 bool listen_song = false;
 
+void clearStrip() {
+  for (int i = 0; i < PixelCount; i++) {
+    strip.SetPixelColor(i, RgbColor(0, 0, 0));
+  }
+
+  strip.Show();
+}
+
 // plays a note from the sensor and updates the current value
 void playNote(int inp_freq = 0) {
   if (listen_song == false){
@@ -416,9 +423,7 @@ void playNote(int inp_freq = 0) {
       avg_mm = 3;
     }
 
-    for (int i = 0; i < PixelCount; i++) {
-      strip.SetPixelColor(i, RgbColor(0, 0, 0));
-    }
+    clearStrip();
   
     int pixelIdx = (avg_mm + 9) * 2 + 1;
     
@@ -461,17 +466,12 @@ void handleNotes() {
     if (note.get_y() == 95 && listen_song == true){
       playNote(note.frequency());
 
-      for (int i = 0; i < PixelCount; i++) {
-        strip.SetPixelColor(i, RgbColor(0, 0, 0));
-      }
+      clearStrip();
 
       int expected_note = find_closest_idx(note.frequency());
 
       int lowPixel = expected_note * 2;
       int highPixel = lowPixel + 3;
-
-      Serial.println(lowPixel);
-
       
       strip.SetPixelColor(lowPixel,RgbColor(255, 0, 0) );
       strip.SetPixelColor(highPixel,RgbColor(255, 0, 0) );
@@ -529,6 +529,7 @@ void handleNotes() {
     note_idx = 0;
     listen_song = false;
     ledcWrite(0,0);
+    clearStrip();
   }
 }
 
@@ -585,6 +586,8 @@ void handleMainMenu() {
     // toggle powersave mode
     powerSave = !powerSave;
     int value = powerSave ? 511: 4095;
+    int brightness = powerSave ? 8: 255;
+    strip.SetBrightness(brightness);
     ledcWrite(10, value);
     tft.fillScreen(TFT_BLACK);
   } else if (top != 0) {
@@ -643,6 +646,7 @@ void drawFreePlayScreen() {
     state = MENU;
     tft.fillScreen(TFT_BLACK);
     ledcWrite(0,0);
+    clearStrip();
   }
 }
 
@@ -718,6 +722,7 @@ void drawRecordScreen() {
   if (recordCount == 150) {
     state = SONG_NAME_ENTRY;
     ledcWrite(0,0);
+    clearStrip();
   }
 }
 
