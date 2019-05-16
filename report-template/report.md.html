@@ -59,9 +59,17 @@ In order to create a quick way to input text for song names or for usernames, we
 ![Figure [esp to imu]: Wiring the IMU to the ESP32..](./images/esp-imu.png width="500px" border="1")
 
 ### Audio Amplifier, Potentiometer and Speaker
-Pitch can be taken as the measure of sound frequency expressed in terms of Hertz. Higher the frequency, higher the pitch. In order to create a specific pitch from the ESP32 to a speaker, we must create the correct frequency via PWM. 
+Pitch can be taken as the measure of sound frequency expressed in terms of Hertz. The higher the frequency, the higher the pitch. In order to create a specific pitch from the ESP32 to a speaker, we must create the correct frequency via Pulse Width Modulation, or PWM. 
 
-In order to produce sound for the project, we used an audio amplifier, potentiometer and a speaker. 
+Luckily for us, the function 
+*ledcWriteTone(channel, frequency)* 
+allows us to vary the frequency of the PWM signal, which in turn, allows us to vary the pitch of the sound produced through the speaker. Since we are using PWM, a form of digital control, we end up creating a square wave as the signal is switched between off and on, or in other words, between 0V and 3.3V.
+
+Great! Now we have a signal, but we have no way of hearing the signal. In order to produce sound so that everyone can hear, we will use an audio amplifier, potentiometer and a speaker. 
+
+The audio amplifier converts the small input voltage from the ESP32 into a much larger output voltage which the speaker can use to actually produce sound. In order to control the volume, we need to control the voltage of the square wave. The higher the voltage, the louder the sound. In the same way, the lower the voltage, the quieter the sound. The slide potentiometer that we are using in this project is a variable resistor, and, when placed in series with the input of the audio amplifier, controls the voltage. In turn, this controls the intensity of the sound.
+
+
 
 ![Figure [esp to audio]: Wiring the amplifier, potentiometer, and speaker to the ESP32..](./images/esp-audio.png width="500px" border="1")
 
@@ -187,6 +195,9 @@ Parts List
 
 Code Documetation
 ===============================================================================
+
+Visit [this link (MIT certs required)](https://github.mit.edu/kgarner/608-s19-final-project) for the full code.
+
 
 Energy management
 ===============================================================================
