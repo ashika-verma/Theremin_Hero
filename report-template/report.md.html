@@ -253,4 +253,28 @@ Our [front-end website](https://608dev.net/sandbox/sc/kgarner/project/html/simpl
 Energy management
 ===============================================================================
 
+To conserve power when using Theremin Hero, we have a special power-saving mode which can be toggled by long pressing in the main menu. In power-saving mode, the display brightness
+is reduced to 1/8 (from 4095 to 511 PWM), and the brightnes of the LEDS is reduced (from 255 to 8).
+
+| State     | Regular usage | Power saving usage
+|-----------|---------------|-------------------
+| Menu      | ~120 mA       | ~110 mA
+| Freeplay  | ~230 mA       | ~140 mA
+| Challenge | ~230 mA       | ~140 mA
+| Record    | 180-230 mA    | 110-150 mA
+
+Assuming that, on average, a user spends 10% of their time in menus and 90% of their time playing, and the battery capacity is 1500 mAh, we can calculate the usage time saved.
+
+### Regular usage
+**Average total input current** = $230 mA \times 0.9 + 140 \times 0.1 = 221 mA$
+
+**Maximum usage time** = $\frac{1500 mAh}{221 mA} = 6.79$ hours
+
+### Power saving usage
+**Average total input current** = $140 mA \times 0.9 + 110 \times 0.1 = 137 mA$
+
+**Maximum usage time** = $\frac{1500 mAh}{137 mA} = 10.95$ hours
+
+Comparing the maximum usage time for regular and power saving, we see a 60% improvement.
+
 <!-- Markdeep: --><style class="fallback">body{visibility:hidden;white-space:pre;font-family:monospace}</style><script src="markdeep.min.js" charset="utf-8"></script><script src="https://casual-effects.com/markdeep/latest/markdeep.min.js?" charset="utf-8"></script><script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
