@@ -44,30 +44,38 @@ The ESP32 is the microcontroller used in this project. We can upload .ino files 
 ### Time of Flight Sensor
 In this project, a note is supposed to be played based on the position of someone’s hand relative to a starting location. In order to accomplish this, we can use a Time of Flight sensor (TOF),  which measures the distance between a sensor and an object based on the time difference between the emission of a signal and its return to the sensor, after being reflected by an object. We can use readings from the TOF to get the position of someone’s hand in millimeters and convert the reading into sound which can be played on a speaker.
 
-Using the following schematic, we can wire the TOF to the ESP32.
+
+![Figure [esp to tof]: Wiring the TOF to the ESP32.](./images/esp-tof.png width="500px" border="1")
+
 
 ### LCD Screen and Buttons
 The main user interface for the Theremin Hero is the LCD screen with buttons. It allows the user to interact with scroll through menus and flip through the different modes. 
 
-Using the following schematic, we can wire the LCD screen and buttons to the ESP32.
-
-![Figure [esp to lcd]: A Diagram of user interaction](./images/esp-lcd.png width="500px" border="1")
+![Figure [esp to lcd]: Wiring the LCD screen and buttons to the ESP32.](./images/esp-lcd.png width="500px" border="1")
 
 ### IMU
 In order to create a quick way to input text for song names or for usernames, we attached an IMU to our board. The IMU contains three types of sensors: an accelerometer, a gyroscope and a magnetometer. The sensor that is important for this project is the accelerometer. By measuring readings from the accelerometer, we can control elements in our project by tilting the sensor. 
 
-Using the following schematic, we can wire the IMU to the ESP32.
+![Figure [esp to imu]: Wiring the IMU to the ESP32..](./images/esp-imu.png width="500px" border="1")
 
 ### Audio Amplifier, Potentiometer and Speaker
 Pitch can be taken as the measure of sound frequency expressed in terms of Hertz. Higher the frequency, higher the pitch. In order to create a specific pitch from the ESP32 to a speaker, we must create the correct frequency via PWM. 
 
 In order to produce sound for the project, we used an audio amplifier, potentiometer and a speaker. 
 
+![Figure [esp to audio]: Wiring the amplifier, potentiometer, and speaker to the ESP32..](./images/esp-audio.png width="500px" border="1")
+
 ### LED Strip
 The LED strip is used to show roughly where a player’s hand is while they are playing with the theremin. 
 
+![Figure [esp to led]: Wiring the LED to the ESP32.](./images/esp-led.png width="500px" border="1")
+
 ### Battery Board
 So that we can make sure our Theremin Hero is portable, we can attach a battery to the setup, using the following schematic
+
+![Figure [board with pictures]: Wiring the board to battery and converter (pictures)](./images/board-1.png width="500px" border="1")
+
+![Figure [board miniman diagram]: Wiring the board to battery and converter (diagram)](./images/board-2.png width="500px" border="1")
 
 ### Casing
 In order to make our theremin look sleek and cool, we laser cut out a neat box. The most important part of the box is the ruler which tells the user where their hand should be in order to play a specific note. Also, the lights attach onto the ruler to visually show what note the user is currently playing. Our specific ruler lines up so that every two leds on the light strip matches a letter. 
