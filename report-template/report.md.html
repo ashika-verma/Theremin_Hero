@@ -1,5 +1,7 @@
 <meta charset="utf-8" emacsmode="-*- markdown -*-">
 
+**Theremin Hero**
+
 Introduction and Overview
 ===============================================================================
 
@@ -49,6 +51,8 @@ The main user interface for the Theremin Hero is the LCD screen with buttons. It
 
 Using the following schematic, we can wire the LCD screen and buttons to the ESP32.
 
+![Figure [esp to lcd]: A Diagram of user interaction](./images/esp-lcd.png width="500px" border="1")
+
 ### IMU
 In order to create a quick way to input text for song names or for usernames, we attached an IMU to our board. The IMU contains three types of sensors: an accelerometer, a gyroscope and a magnetometer. The sensor that is important for this project is the accelerometer. By measuring readings from the accelerometer, we can control elements in our project by tilting the sensor. 
 
@@ -75,8 +79,23 @@ Block Diagram
 
 State Machine
 ===============================================================================
+![Figure [state machine]: The state machine for our divice](./images/state-machine.png width="500px" border="1")
+
+Turning on the device
+-------------------------------------------------------------------------------
+
+<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/7Rxt3Agw6Gc" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
+Free-play and recording modes
+-------------------------------------------------------------------------------
+
+<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/ACYtO8WlEks" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
 
+Play-back and competitive modes
+-------------------------------------------------------------------------------
+
+<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/wMrJRm1sOq0" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 Challenges
 ===============================================================================
 
