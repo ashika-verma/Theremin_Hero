@@ -220,6 +220,19 @@ Hardware
 Server
 -------------------------------------------------------------------------------
 
+### Songs
+* We used an SQLite database to save songs recorded through the ESP32 and POSTed to the server or directly uploaded through the project’s website.
+* Each of the song table entries consists of a song ID generated through the database, a song name chosen by the uploader of the song, a text of the form `freq,cycles;freq,cycles;...` representing the song itself, and a timestamp representing when the song was uploaded.
+* POST format involves 2 arguments: `songName` representing the name of the uploaded song and `musicString` representing the body of the song.
+* GET requests are used to return the IDs and the names of all the songs in the database if no arguments are passed, or the name of a single song if a song ID argument is passed in.
+
+### Scores
+* We created a separate table in the same database to save scores POSTed through the ESP32. 
+* Each of the score table entries consists of a score value, an ID referencing a specific song in the song table, a username value representing the player with that score, a timestamp representing when the player got that score for that particular song.
+* POST requests involve the following arguments: `userName`, `songId`, and `score`.
+* The leaderboard of each song in the song table can be viewed on the front-end website in a descending order by score value. GET request format to view the leaderboard for a song involves a `songId` argument. 
+* Adding a `userName` argument to a GET request returns all the scores by the player represented by `userName` for the song represented by `songId`.
+
 Website
 -------------------------------------------------------------------------------
 
