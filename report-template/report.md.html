@@ -1,11 +1,77 @@
 <meta charset="utf-8" emacsmode="-*- markdown -*-">
 
+Introduction and Overview
+===============================================================================
+
+Introduction
+-------------------------------------------------------------------------------
+
+The Theremin is an electronic instrument invented in the late 1930s with the peculiar characteristic of being controlled with no physical contact, only variations in proximity. A traditional theremin consists of two antennas (one for volume and one for pitch) that form open-air capacitors with a player’s nearby hands that affect a circuit to produce audible frequencies. Although objectively awesome, the Theremin has yet to gain mainstream recognition as the best musical instrument of all time but that’s all about to change. With the introduction of Theremin Hero comes the dawn of a new musical era, bringing this obscure instrument to every household in America and igniting the competitive theremin gaming scene. 
+
+Overview
+-------------------------------------------------------------------------------
+
+Using time of flight sensing, the Theremin Hero measures the proximity of a user’s hand along a marked fret board and translates this proximity into matching frequencies from C3 to C4. Adjusting the volume with a slider, users can play all their favorite songs and share their own creations with family and friends by uploading named songs to the server where they can be displayed and played back in the browser. Not just this but users can try their hand at playing uploaded songs and compete for high scores for each song. For a less thrilling experience, users can jam out in free play mode or sit back and browse songs on
+
+
 System Overviw
 ===============================================================================
 
+Hardware
+-------------------------------------------------------------------------------
+
+The final product should look similar to a box with a ruler extending out from one side. Inside the box is all the hardware necessary to run the code and connect parts together, while outside are all the components the user is supposed to interact with. Before gluing anything down, let’s begin with the breadboard set up.
+
+Hardware list:
+* TOF
+* Amplifier
+* Potentiometer
+* Speaker
+* LCD Screen
+* LEDs
+* Buttons
+* Battery Board
+* IMU
+
+Use the following circuit diagrams to wire the Theremin hero. 
+
+### ESP32
+The ESP32 is the microcontroller used in this project. We can upload .ino files onto the board and the ESP32 board will run the program. 
+
+
+### Time of Flight Sensor
+In this project, a note is supposed to be played based on the position of someone’s hand relative to a starting location. In order to accomplish this, we can use a Time of Flight sensor (TOF),  which measures the distance between a sensor and an object based on the time difference between the emission of a signal and its return to the sensor, after being reflected by an object. We can use readings from the TOF to get the position of someone’s hand in millimeters and convert the reading into sound which can be played on a speaker.
+
+Using the following schematic, we can wire the TOF to the ESP32.
+
+### LCD Screen and Buttons
+The main user interface for the Theremin Hero is the LCD screen with buttons. It allows the user to interact with scroll through menus and flip through the different modes. 
+
+Using the following schematic, we can wire the LCD screen and buttons to the ESP32.
+
+### IMU
+In order to create a quick way to input text for song names or for usernames, we attached an IMU to our board. The IMU contains three types of sensors: an accelerometer, a gyroscope and a magnetometer. The sensor that is important for this project is the accelerometer. By measuring readings from the accelerometer, we can control elements in our project by tilting the sensor. 
+
+Using the following schematic, we can wire the IMU to the ESP32.
+
+### Audio Amplifier, Potentiometer and Speaker
+Pitch can be taken as the measure of sound frequency expressed in terms of Hertz. Higher the frequency, higher the pitch. In order to create a specific pitch from the ESP32 to a speaker, we must create the correct frequency via PWM. 
+
+In order to produce sound for the project, we used an audio amplifier, potentiometer and a speaker. 
+
+### LED Strip
+The LED strip is used to show roughly where a player’s hand is while they are playing with the theremin. 
+
+### Battery Board
+So that we can make sure our Theremin Hero is portable, we can attach a battery to the setup, using the following schematic
+
+### Casing
+In order to make our theremin look sleek and cool, we laser cut out a neat box. The most important part of the box is the ruler which tells the user where their hand should be in order to play a specific note. Also, the lights attach onto the ruler to visually show what note the user is currently playing. Our specific ruler lines up so that every two leds on the light strip matches a letter. 
+
+
 Block Diagram
 ===============================================================================
-![Figure [block-diagram]: some text text](./images/block-diagram.png width="500px" border="1")
+![Figure [block-diagram]: A Diagram of user interaction](./images/block-diagram.png width="500px" border="1")
 
 State Machine
 ===============================================================================
