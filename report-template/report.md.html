@@ -1,12 +1,231 @@
 <meta charset="utf-8" emacsmode="-*- markdown -*-">
 
-Code Design
+**Theremin Hero**
+
+Introduction and Overview
+===============================================================================
+
+Introduction
+-------------------------------------------------------------------------------
+
+The Theremin is an electronic instrument invented in the late 1930s with the peculiar characteristic of being controlled with no physical contact, only variations in proximity. A traditional theremin consists of two antennas (one for volume and one for pitch) that form open-air capacitors with a player’s nearby hands that affect a circuit to produce audible frequencies. Although objectively awesome, the Theremin has yet to gain mainstream recognition as the best musical instrument of all time but that’s all about to change. With the introduction of Theremin Hero comes the dawn of a new musical era, bringing this obscure instrument to every household in America and igniting the competitive theremin gaming scene. 
+
+Overview
+-------------------------------------------------------------------------------
+
+Using time of flight sensing, the Theremin Hero measures the proximity of a user’s hand along a marked fret board and translates this proximity into matching frequencies from C3 to C4. Adjusting the volume with a slider, users can play all their favorite songs and share their own creations with family and friends by uploading named songs to the server where they can be displayed and played back in the browser. Not just this, but users can try their hand at playing uploaded songs and compete for high scores for each song. For a less thrilling experience, users can jam out in free play mode or sit back and browse songs on the Theremin Hero or online.
+
+How to Play!
+-------------------------------------------------------------------------------
+
+When a user first turns on their Theremin Hero, they will be asked to input a username, which will be used later for saving scores and new songs. After inputting a name, the user will see a menu of three different modes:
+* Free Play Mode
+* Record Song
+* Get Song and Compete
+
+In **Free Play Mode**, the user can simply play around with different notes and volumes. It’s chill; the user does not have to worry about competing with anything and can listen to the pretty sounds alongside watching the pretty purple lights. The further away the user’s hand is from the sensor, the higher pitched the sound. There is also a fretboard which indicates where each note is relative to the sensor. For confirmation of where a user’s hand is, LEDs will light up on the fretboard showing exactly what note is being played. Additionally, the note the user is playing is also displayed on the LCD screen which is mounted on top of the Theremin Hero. In order to have full control of the volume, there is a slider which changes the volume of the Theremin Hero.
+
+In **Record Song**, a user who is proud of a particular song that they have played can record up to 15 seconds of the song and upload it to the internet. While a user is recording, they will see the same features as in **Free Play Mode** except the LCD screen will give a countdown of how much time there is left to record a song. The songs that are uploaded are also added to the song database used in the **Get Song and Compete** mode.
+
+In **Get Song and Compete**, a user can retrieve songs and try to play it the most accurately. Before the user jumps straight into competing, they can listen to the song and see the notes that are supposed to be played. On the LCD screen, there are falling blocks which show where the user’s hand needs to be at a certain time and in the near future. Additionally, the LED light strip shows where a note is and a range of where a user’s hand needs to be in order to get points. This mode is best for practicing as the user can hear and see what needs to be played. When the user feels confident in their abilities, they can actually compete and try to play the song correctly for points. The LED light strip will still show where the user’s hand should be as well as what the user is currently playing. The LCD screen shows the same thing as the practice mode. After competing, the user’ score is sent online so that other people can see and compare.
+
+In addition to the physical Theremin Hero, there are plenty of things to do [online at this link](https://608dev.net/sandbox/sc/kgarner/project/html/simple-form.html)
+
+Here, the user has the option to **View songs** and **Upload a song**.
+
+In **View songs**, the user sees a list of all the songs recorded or previously uploaded. The user can click on a particular song to listen to what the song sounds like and to view the scoreboard of everyone who has competed against this particular song. If a song seems particularly enticing and a user wants to keep it on their computer, they can also download the audio of a song.
+
+In **Upload a song**, a user can type out the durations of notes of a song and the song will be added to the song database. The user will be able to play their generated in **View songs** and in the **Get Song and Compete** mode on the Theremin Hero.
+
+That should be everything you need to know to play! Rock on!
+
+System Overview
 ===============================================================================
 
 Hardware
 -------------------------------------------------------------------------------
 
-### ui_tools:
+The final product should look similar to a box with a ruler extending out from one side. Inside the box is all the hardware necessary to run the code and connect parts together, while outside are all the components the user is supposed to interact with. Before gluing anything down, let’s begin with the breadboard set up.
+
+Hardware list:
+* TOF
+* Amplifier
+* Potentiometer
+* Speaker
+* LCD Screen
+* LEDs
+* Buttons
+* Battery Board
+* IMU
+
+Use the following circuit diagrams to wire the Theremin hero. 
+
+### ESP32
+The ESP32 is the microcontroller used in this project. We can upload .ino files onto the board and the ESP32 board will run the program. 
+
+
+### Time of Flight Sensor
+In this project, a note is supposed to be played based on the position of someone’s hand relative to a starting location. In order to accomplish this, we can use a Time of Flight sensor (TOF),  which measures the distance between a sensor and an object based on the time difference between the emission of a signal and its return to the sensor, after being reflected by an object. We can use readings from the TOF to get the position of someone’s hand in millimeters and convert the reading into sound which can be played on a speaker.
+
+
+![Figure [esp to tof]: Wiring the TOF to the ESP32.](./images/esp-tof.png width="500px" border="1")
+
+
+### LCD Screen and Buttons
+The main user interface for the Theremin Hero is the LCD screen with buttons. It allows the user to interact with scroll through menus and flip through the different modes. 
+
+![Figure [esp to lcd]: Wiring the LCD screen and buttons to the ESP32.](./images/esp-lcd.png width="500px" border="1")
+
+### IMU
+In order to create a quick way to input text for song names or for usernames, we attached an IMU to our board. The IMU contains three types of sensors: an accelerometer, a gyroscope and a magnetometer. The sensor that is important for this project is the accelerometer. By measuring readings from the accelerometer, we can control elements in our project by tilting the sensor. 
+
+![Figure [esp to imu]: Wiring the IMU to the ESP32..](./images/esp-imu.png width="500px" border="1")
+
+### Audio Amplifier, Potentiometer and Speaker
+Pitch can be taken as the measure of sound frequency expressed in terms of Hertz. The higher the frequency, the higher the pitch. In order to create a specific pitch from the ESP32 to a speaker, we must create the correct frequency via Pulse Width Modulation, or PWM. 
+
+Luckily for us, the function 
+*ledcWriteTone(channel, frequency)* 
+allows us to vary the frequency of the PWM signal, which in turn, allows us to vary the pitch of the sound produced through the speaker. Since we are using PWM, a form of digital control, we end up creating a square wave as the signal is switched between off and on, or in other words, between 0V and 3.3V.
+
+Great! Now we have a signal, but we have no way of hearing the signal. In order to produce sound so that everyone can hear, we will use an audio amplifier, potentiometer and a speaker. 
+
+The audio amplifier converts the small input voltage from the ESP32 into a much larger output voltage which the speaker can use to actually produce sound. In order to control the volume, we need to control the voltage of the square wave. The higher the voltage, the louder the sound. In the same way, the lower the voltage, the quieter the sound. The slide potentiometer that we are using in this project is a variable resistor, and, when placed in series with the input of the audio amplifier, controls the voltage. In turn, this controls the intensity of the sound.
+
+
+
+![Figure [esp to audio]: Wiring the amplifier, potentiometer, and speaker to the ESP32..](./images/esp-audio.png width="500px" border="1")
+
+### LED Strip
+The LED strip is used to show roughly where a player’s hand is while they are playing with the theremin. 
+
+![Figure [esp to led]: Wiring the LED to the ESP32.](./images/esp-led.png width="500px" border="1")
+
+### Battery Board
+So that we can make sure our Theremin Hero is portable, we can attach a battery to the setup, using the following schematic
+
+![Figure [board with pictures]: Wiring the board to battery and converter (pictures)](./images/board-1.png width="500px" border="1")
+
+![Figure [board miniman diagram]: Wiring the board to battery and converter (diagram)](./images/board-2.png width="500px" border="1")
+
+### Casing
+In order to make our theremin look sleek and cool, we laser cut out a neat box. The most important part of the box is the ruler which tells the user where their hand should be in order to play a specific note. Also, the lights attach onto the ruler to visually show what note the user is currently playing. Our specific ruler lines up so that every two leds on the light strip matches a letter. 
+
+See [this link](https://drive.google.com/open?id=1-3Nppd0PISgEtYm3FIpB9hFlXenwfGjT) for our dxf files.
+
+Block Diagram
+===============================================================================
+![Figure [block-diagram]: A Diagram of user interaction](./images/block-diagram.png width="500px" border="1")
+
+State Machine
+===============================================================================
+![Figure [state machine]: The state machine for our divice](./images/state-machine.png width="500px" border="1")
+
+Turning on the device
+-------------------------------------------------------------------------------
+
+<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/7Rxt3Agw6Gc" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
+Free-play and recording modes
+-------------------------------------------------------------------------------
+
+<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/ACYtO8WlEks" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
+
+Play-back and competitive modes
+-------------------------------------------------------------------------------
+
+<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/wMrJRm1sOq0" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+Challenges
+===============================================================================
+
+**Server-Side Audio Generation**
+
+* We formatted music strings as pairs of frequency and interval length values. We used python’s *numpy* and *soundfile* libraries to generate sine waves and concatenate them into a single .OGG sound file. 
+* However, the dicontinuities in the concatenated sine wave produced clikcing sounds whenever the tone changed in any music file.
+* Therefore, we saved the last amplitude value in each sine wave subinterval representing a single frequency, from which we calculated the amplitude value at which the next different-frequency sine wave would start.
+
+**Distance Sensing**
+
+* Ultrasonic Sensor
+  * The original design of the Theremin Hero relied on pulsing ultrasonic sensors to provide information on the  distance of the player’s hands.
+  * However, these sensors were prone to noise, required perfectly flat surfaces, and were quite unreliable even with the help of averaging filters and other software fixes.
+* Infrared Sensor
+  * Similar to the ultrasonic sensors, the IR sensor did not produce very consistent results and did not work very well with rough surfaces
+* TOF (Time of Flight) Sensor
+  * The TOF sensor was ultimately the best fit for this project. Although it does not have as large a range as the other sensors, accuracy was the greatest concern for this project, not range.
+  * The pulsating light beam works well with complex surfaces like a hand and can even detect figures such as fingers reasonably well.
+  * Unlike with ultrasound, the environment does not have much noise that would interfere with the TOF sensor. Additionally, the light pulses are well isolated in a region in front of the sensor and are roughly the size of a hand (viewed through UV/IR laser
+
+**Volume Control**
+
+* Ultrasonic Sensor
+  * Although the original plan was for an additional ultrasonic sensor to measure distance for the volume, the interference of one ultrasonic sensor rendered readings inaccurate, let alone another polluting the environment with ultrasonic propagations.
+* TOF Sensor
+  * A secondary TOF sensor was another option for the volume control but since they would share the same I2C bus and, being the same part, have the same address it would likely cause problems
+* Digital Inputs
+  * Initially believing it would be possible to control the volume with PWM/Duty cycles it became clear that would not yield appropriate results.
+  * Considered using a digi-pot to change the voltage entering the buzzer but would be limited to discrete values.
+* Analog Potentiometer
+  * A sliding potentiometer became the volume control for the final iteration of the project. Trouble with digitally controlling the volume suggested an analog fix would be ideal and allow for more continuous volume adjustments.
+  * Originally using a screw-top potentiometer, many different resistors were attempted including photocells and flex sensors but a sliding potentiometer became the most reliable and functional solution.
+
+**Visualization**
+
+* Screen visualization
+  * When implementing the “game” portion of the project, a difficult design choice was determining how to transmit to the player what notes to play in an intuitive way.
+  * Like many other beat/rhythm games it became obvious the best structure was some sort of moving or falling note system.
+  * After some thought, it seemed integral that the player have a visual reminiscent of the instrument’s fretboard. This allows the player, while in a competitive mode, to be able to focus on the screen and the prompted notes rather than the fretboard.
+* Fretboard/LEDs
+  * Besides the screen a physical representation for the player seemed ideal which intuitively came in the form of a fretboard.
+  * For the player to get a better idea of their positioning, LEDs were added and programmed not only light up the current note but also to act as a guide for what notes to play in competitive mode.
+
+**Audio Generation**
+
+* Piezo Buzzer
+  * Figuring out how to emit audio of reasonable quality was difficult for much of the design process.
+  * A simple piezo buzzer sounded subpar with square waves and would have many issues with audio cut outs, overtones, and popping. However, the buzzer was useful for initial testing of the system.
+* Amplifier/Speaker
+  * The final audio setup consists of an amplifier chip and speaker which greatly improved audio quality and made volume control much more reasonable.
+* Software
+  * After playing with the idea of MIDI files or using an SD card and MP3s it seemed the best to just go with arduinos built in tone producing functions using PWM at an analog input. This allowed us to easily produce and change the tones without any other files.
+  * Choosing when to write and update tones was crucial to removing periodic buzzing and audio cut-outs so ensuring not to rewrite notes every time interval helped smooth out sound
+  * The PWM used for screen brightness seemed to receive some interference from the PWM for audio output. A simple and unexpected fix was to create greater distance between PWM channels. (Initially using 0,1 and moving to use 0,14).
+
+**User Inputs**
+
+* IMU
+  * A small but crucial design decision was implementing the IMU for scrolling movement through the alphabet for song names and usernames.
+  * A significant improvement from button scrolling.
+
+**Note Mapping**
+
+* In the beginning we employed a linear scaling to map notes to frequencies. However, we found this to be difficult to map (and sometimes imprecise).
+* To more properly reflect how notes worked, we found a new mapping function based off of powers/logs
+Parts List
+===============================================================================
+
+* **Time of Flight sensor**
+  * VL6180X Time-of-Flight Distance Sensor Carrier with Voltage Regulator
+* **Slider Potentiometer** 
+  * Robotdyn Analog Slide Potentiometer 10K ohm
+* **Arduino Stereo Audio Amplifier**
+  * PAM8403 5V Two-channel Stereo Mini Class-D 3W+3W Audio Amplifier
+* **Speaker**
+  * 1.5" 4Ohm 3W Full Range Audio Speaker Stereo Woofer Loudspeaker
+* ~1ft of side emitting RBG LEDs
+* 1/4th Inch Black and Clear Acrylic
+* Additional small breadboard
+
+Code Documetation
+===============================================================================
+
+Visit [this link (MIT certs required)](https://github.mit.edu/kgarner/608-s19-final-project) for the full code.
+
+Hardware
+-------------------------------------------------------------------------------
+
+### ui_tools
 
 ---
 
@@ -603,26 +822,56 @@ Hardware
 
 		This helper function takes care of the http get and post requests. While connected to the host, it sends the specified request and reads out the response.
 
-Server Side
+Server
 -------------------------------------------------------------------------------
 
-### server:
+### Songs
+* We used an SQLite database to save songs recorded through the ESP32 and POSTed to the server or directly uploaded through the project’s website.
+* Each of the song table entries consists of a song ID generated through the database, a song name chosen by the uploader of the song, a text of the form `freq,cycles;freq,cycles;...` representing the song itself, and a timestamp representing when the song was uploaded.
+* POST format involves 2 arguments: `songName` representing the name of the uploaded song and `musicString` representing the body of the song.
+* GET requests are used to return the IDs and the names of all the songs in the database if no arguments are passed, or the name of a single song if a song ID argument is passed in.
 
----
+### Scores
+* We created a separate table in the same database to save scores POSTed through the ESP32. 
+* Each of the score table entries consists of a score value, an ID referencing a specific song in the song table, a username value representing the player with that score, a timestamp representing when the player got that score for that particular song.
+* POST requests involve the following arguments: `userName`, `songId`, and `score`.
+* The leaderboard of each song in the song table can be viewed on the front-end website in a descending order by score value. GET request format to view the leaderboard for a song involves a `songId` argument. 
+* Adding a `userName` argument to a GET request returns all the scores by the player represented by `userName` for the song represented by `songId`.
 
-	**`freq_est.py`**
+Website
+-------------------------------------------------------------------------------
 
-	**`score_server.py`**
+Our [front-end website](https://608dev.net/sandbox/sc/kgarner/project/html/simple-form.html) is a simple single-page app using the Bootstrap framework. The website has the following capabilities:
 
-	**`server.py`**
+* **View songs**: You can see a list of all the songs that have been uploaded to server. This is updated whenever the user visits the page.
+* **View a specific song**: : You can listen to a single song (in OGG format), as well as see any scores associated with it. You can also filter to see the high score of a single person.
+* **Upload a song**: You can upload a song using our song-file format. Our format is the following: `SONG_FILE ::= (frequency “,” duration “;”)*` where frequency is a float corresponding to a note frequency, and duration is how long the note should be played (measured in 100 ms blocks)
 
-	**`wav.py`**
+Energy management
+===============================================================================
 
-	#### html:
+To conserve power when using Theremin Hero, we have a special power-saving mode which can be toggled by long pressing in the main menu. In power-saving mode, the display brightness
+is reduced to 1/8 (from 4095 to 511 PWM), and the brightnes of the LEDS is reduced (from 255 to 8).
 
-	---
+| State     | Regular usage | Power saving usage
+|-----------|---------------|-------------------
+| Menu      | ~120 mA       | ~110 mA
+| Freeplay  | ~230 mA       | ~140 mA
+| Challenge | ~230 mA       | ~140 mA
+| Record    | 180-230 mA    | 110-150 mA
 
-		**`scripts.js`**
+Assuming that, on average, a user spends 10% of their time in menus and 90% of their time playing, and the battery capacity is 1500 mAh, we can calculate the usage time saved.
 
+### Regular usage
+**Average total input current** = $230 mA \times 0.9 + 140 \times 0.1 = 221 mA$
+
+**Maximum usage time** = $\frac{1500 mAh}{221 mA} = 6.79$ hours
+
+### Power saving usage
+**Average total input current** = $140 mA \times 0.9 + 110 \times 0.1 = 137 mA$
+
+**Maximum usage time** = $\frac{1500 mAh}{137 mA} = 10.95$ hours
+
+Comparing the maximum usage time for regular and power saving, we see a 60% improvement.
 
 <!-- Markdeep: --><style class="fallback">body{visibility:hidden;white-space:pre;font-family:monospace}</style><script src="markdeep.min.js" charset="utf-8"></script><script src="https://casual-effects.com/markdeep/latest/markdeep.min.js?" charset="utf-8"></script><script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
