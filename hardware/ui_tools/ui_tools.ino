@@ -49,11 +49,11 @@ Button bottomPin(BOT_PIN);
 // wifi related vars
 char host[] = "608dev.net";
 
-//const char network[] = "6s08";  //SSID for 6.08 Lab
-//const char password[] = "iesc6s08"; //Password for 6.08 Lab
+const char network[] = "6s08";  //SSID for 6.08 Lab
+const char password[] = "iesc6s08"; //Password for 6.08 Lab
 
-const char network[] = "MIT";  //SSID for 6.08 Lab
-const char password[] = ""; //Password for 6.08 Lab
+//const char network[] = "MIT";  //SSID for 6.08 Lab
+//const char password[] = ""; //Password for 6.08 Lab
 
 const char delim[] = ",;";
 const int notes_freq[] = {262, 277, 294, 311, 330, 349, 370, 392, 415, 440, 466, 494, 523};

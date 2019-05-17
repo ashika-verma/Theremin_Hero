@@ -1,37 +1,628 @@
 <meta charset="utf-8" emacsmode="-*- markdown -*-">
-  **Theremin**
 
-For our 6.08 final reports, we require each team create a site report (structure up to you), but we'd strongly recommend building a Markdown-centric report since the learning curve is very shallow, allowing everyone on the team to quickly get up to speed and 
-
-Instead of using raw HTML which can be annoying to write in, [Markdown](https://en.wikipedia.org/wiki/Markdown) is a really nice alternative since the syntax is extremely lightweight allowing you to focus on content rather than matching tags, etc.  Markdown on its own usually requires some sort of processor, perhaps on the server hosting the files so that it can utimately turn it into HTML, however there have been several attemps at doing this client-side, meaning within the browser.  One approach to this, we recommend is [MarkDeep](http://casual-effects.com/markdeep/) found here.  This allows you to quickly create a decent looking html document in a number of supported styles (including a LaTeXy one.  The person who wrote it wrote up some nice documentation as well, [found here](https://casual-effects.com/markdeep/features.md.html).  
-
-This page you're currently reading, in fact, is written/rendered using MarkDeep. (go ahead and right/control-click on this page and see the source!)  
-
-
-Section
+Code Design
 ===============================================================================
 
-Example section!
-
-
-Subsection
+Hardware
 -------------------------------------------------------------------------------
-![Figure [block-diagram]: some text text](./images/block-diagram.png width="500px" border="1")
 
-Example subsection
+### ui_tools:
 
-For images, and other static media, try to place them all in a reasonable directory structure like we do below
+---
 
-![Figure [granada]: Example image...a 75-77 (didn't want to get too close to check) Ford Granada Coupe I spotted in my neighborhood two weekends ago! Look at that thing.](./images/granada.png width="400px" border="1")
+	**`ui_tools.ino`**
 
-For small videos, you can upload/include them with your static files like images.  For larger videos, strongly consider hosting on a resource like Youtube!
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C
+		const std::vector<std::string> NOTES = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B", "C" };
+		...
+		const int notes_freq[] = {262, 277, 294, 311, 330, 349, 370, 392, 415, 440, 466, 494, 523};
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Markdeep features some really nice ASCII-based block-diagrams if you want to use them (and are patient enough)
+		While we have decided to play the notes based on position continuously, we have a `NOTES` string to separate the ranges of frequencies into discretized notes. This makes the visualization much easier and less cluttered for the player especially since it can now be done in a Guitar Hero-like style familiar to many people. This also makes scoring much easier since the conversion from distance to frequency is logarithmic. So rather than scoring based on a set frequency or distance off from the ideal which does not scale properly, we can score based on whether the same note is hit or not. This also logically makes sense due to the visualization separating the notes and gives a proper margin of error based on the note hit which is what would really matter in the from the musical point of view. To get the correct note to display, we grab the distance in millimeters from the time-of-flight sensor, and convert that to a frequency to play. Once we have the frequency, we find the closest frequency from the `notes_freq` list above and get the index which matches up with the note.
+
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C
+		int find_closest_idx(float freq) {
+		  int semitone = round(log2(freq / 440.0) * 12.0);  
+		  semitone += 9;
+
+		  if (semitone < 0) {
+		    return 0;
+		  } else if (semitone >= NOTES.size()) {
+		    return NOTES.size() - 1;
+		  } else {
+		    return semitone;
+		  }
+		}
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+		The function above returns the index in the `notes_freq` list. It takes in the frequency converted from the distance and the equation `semitone = round(log2(freq / 440.0) * 12.0);` finds the amount of semitones away from the base note which is set to 440 Hz or "A". To get frequencies for different notes, the equation $f_n = f_0*a^n$ is used where a is $2^(1/12)$, $f_0$ is the base note's frequency, and $n$ is the amount of semitones away from the base note. This equation is reversed to get us the offset in the function above. Since "A" is the 9th index, we convert the offset to the index by adding 9. Then the function bounds the index if it is too large or small and then returns the index in the `NOTES` and `notes_freq` list. This function is constantly used to determine what note is being played on the continous scale to determine points and visualization of the notes.
 
 
-Questions?
----------------------
-Questions?  Read the docs for markdeep (the feature demo in particular). They are nice, but for 6.08-specific formatting rules, please feel free to post on Piazza!
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C
+		class Note {
+		  private:
+		    ...
+
+		  public:
+		    Note(float freq, int inp_y = 15) {
+		      this->y = inp_y;
+		      int idx = find_closest_idx(freq);
+		      this->x = 12 * idx;
+		      this->freq = notes_freq[idx];
+		    }
+
+		    void draw(uint16_t inp_color = TFT_RED) {
+		      if (y > 15) {
+		        tft.fillRect(x + 1, y -19, 10, 18, TFT_BLACK);
+		      }
+		      if (y < 115) {
+		        tft.fillRect(x + 1, y + 1, 10, 18, inp_color);
+		      }
+		      y += 20;
+		    }
+
+		    int get_y() {
+		      return y;
+		    }
+
+		    int frequency() {
+		      return freq;
+		    }
+		};
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+		The `Note` class creates a note instance for every note in a song. It stores the x and y values to draw on screen in addition to the frequency of the note. The constructor stores the input y value and determines the x value based on the note from the input frequency and the corresponding frequency from that note. The class also has a get_y and frequency method to safely retrieve the y and frequency attribute. The draw method draws a rectangle based on the x and y values and increments the y value by 20 each time it is called so that the note moves down the screen when visualized.
+
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C
+		std::vector<float> parse_song(char* input_song) {
+		  std::vector<float> output;
+		  char * token = strtok(input_song, delim);
+
+		  while (token != NULL) {
+		    float freq = atof(token);
+		    token = strtok(NULL, delim);
+		    
+		    if (token == NULL) { break; } // fix a weird issue of premature null
+		    
+		    int duration = atof(token);
+		    token = strtok(NULL, delim);
+
+		    // appends duration * LOOP_COUNT frequencies
+		    for (int i = 0; i < duration * LOOP_COUNT; i++) {
+		      output.push_back(freq);
+		    }
+		  }
+
+		  return output;
+		}
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+		The parse_song function takes in a char_array in the form "freq,duration;freq,duration;" and returns an output vector of frequencies to play. The `input_song` is tokenized into frequencies and durations and frequencies are appended duration*LOOP_COUNT times into the output array. When the songs are pulled from the server, the songs are are not in the proper format to display or play. However, the format they are in saves a lot of space so this function is used to parse the songs into the proper, more memory consuming format as needed. Thus, this function is called to play or listen to a recorded song.
+
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C
+		struct SongEntry {
+		  std::string id;
+		  std::string text;
+		};
+
+		...
+
+		std::vector<SongEntry> getEntries(char *entries) {
+		  std::vector<SongEntry> output;
+		  char *token = strtok(entries, ENTRY_DELIM);
+
+		  while(token != NULL) {
+		    std::string id(token);
+		    token = strtok(NULL, ENTRY_DELIM);
+
+		    if (token == NULL) { break; }
+
+		    std::string text(token);
+
+		    output.push_back(SongEntry{id, text});
+		    token = strtok(NULL, ENTRY_DELIM);
+		  }
+
+		  return output;
+		}
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+		The SongEntry structure is used to store the song name and id. The getEntries function uses the SongEntry structure to receive a list of song names and ids from the entries char array. The entries array is tokenized and turned into a list of songs to display and select from by making SongEntry and adding it to the output list. The response body from the server returns a char array and this function parses that into titles to match the songs with. This is used to display the songs to choose from when playing.
+
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C
+		void get_angle(float* x, float* y) {
+		  imu.readAccelData(imu.accelCount);
+		  *x = imu.accelCount[0] * imu.aRes;
+		  *y = imu.accelCount[1] * imu.aRes;
+		}
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+		This function gets the data from the imu and stores it in the x and y variables which is used to calculate the angle for scrolling through the alphabet array in the NameGetter class.
+
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C
+		class NameGetter {
+		  private:
+		    char alphabet[50] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+		    char entered_name[50] = {0};
+		    ...
+
+		  public:
+		    NameGetter(const char* nameType) { // nameType: either "Song" or "User"
+		      ...
+		    }
+		    void get_name(char* output) {
+		      // writes the name entered through the imu in output
+		      sprintf(output, entered_name);
+		      memset(entered_name, 0, sizeof(entered_name));
+		    }
+		    void update(float angle, int button, char* output) {
+		      ...
+		    }
+		};
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+		The `NameGetter` class was created to be able to create a username to track scores when playing songs or to name new songs after recording them. The `alphabet` array has all the valid characters to use in a username or song name and allows us to use the imu to quickly scroll through it. The `entered_name` array tracks the previous characters in the username/song name. The class has the constructor to initialize a new instance of `NameGetter`, the methods get_name, and update. The get_name method writes whatever is stored in the `entered_name` array to the `output` array and clears the `entered_name array`. The update method uses a state machine with three cases. The first case uses a long press to start entering the name. The second case calls upon the previous get_angle function to scroll through the `alphabet` array by tilting and writing characters to the `entered_name` array through short button presses. The third case then saves what was written using a long button press.
+
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C
+		void clearStrip() {
+		  for (int i = 0; i < PixelCount; i++) {
+		    strip.SetPixelColor(i, RgbColor(0, 0, 0));
+		  }
+
+		  strip.Show();
+		}
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+		This function goes through each LED on the strip and turns it off to clear the strip. After each loop of visualization, this clears the previous loops LEDs and is especially important as the LED draws a significant amount of power and can cause a brownout if too many LEDs are on.
+
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C
+		void initializeWifi() {
+		  ...
+		}
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+		This helper function is used to connect to the wifi using the network info on setup.
+
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C
+
+		void setup() {
+		  ledcSetup(10, 60, 12);
+		  ledcAttachPin(13, 10);
+		  ledcWrite(10, 4095);
+		  ...
+		  char request[100];
+		  sprintf(request, "GET https://608dev.net/sandbox/sc/kgarner/project/server.py HTTP/1.1\r\n");
+		  strcat(request, "Host: 608dev.net\r\n\r\n");
+		  do_http_request(host, request, response_buffer, OUT_BUFFER_SIZE, RESPONSE_TIMEOUT, true);
+		  menu = getEntries(response_buffer);
+		  songEnd = min(ENTRIES_PER_SCREEN, menu.size());
+		  ...
+		}
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+		Upon setup, the ESP32 clears the screen, sets up the buttons, connects to the wifi, clears the LEDs, starts the imu, TOF sensor, and amplifier along with enabling the PWM for the monitor to control brightness and save power. It also sends a GET request to the server and pulls all the possible songs to choose from. This is later parsed and shown when picking songs to play.
+
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C
+		void playNote(int inp_freq = 0) {
+		  if (listen_song == false){
+		    mm = sensor.readRange();
+		    older_mm = old_mm;
+		    old_mm = mm;
+		    
+		    // get an input from TOF and wrap it in the range C3 to C4
+		    // for all the semitones
+		    avg_mm = ((mm+old_mm+older_mm)/3);
+		    avg_mm = map(avg_mm,0,200,-9,3);
+		  
+		    // scale the range
+		    if (avg_mm < -9) {
+		      avg_mm = -9;
+		    } else if (avg_mm > 3) {
+		      avg_mm = 3;
+		    }
+
+		    clearStrip();
+		  
+		    int pixelIdx = (avg_mm + 9) * 2 + 1;
+		    
+		    strip.SetPixelColor(pixelIdx,RgbColor(255, 0, 255) );
+		    strip.SetPixelColor(pixelIdx + 1,RgbColor(255, 0, 255) );
+		  
+		    strip.Show();
+
+		    // scale to frequency using power and play song
+		    avg_mm = 440 * pow(2, avg_mm / 12.0);
+		  }
+		  
+		  else{
+		    avg_mm = inp_freq;
+		  }
+		  
+		  if (old_freq != avg_mm) {
+		    ledcWriteTone(0, avg_mm);
+		    ledcWrite(0,100);
+		    old_freq = avg_mm;
+		  }
+		}
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+		The playNote function is the heart and soul of the theremin and is heavily used in all three modes to play whatever frequencies are needed. When listening to a song (listen_song == True), the function takes in a frequency and writes that to the amplifier. To deal with the clicking when writing a frequency to the amplifier, a frequecy will only be written if it is different from one currently being played which minimizes the amount of times the amplifier has to play a sound and reduces extraneous noise. When playing something from the theremin, the function gets a distance reading from the TOF sensor in millimeters this is then averaged to account for any spikes due to errors in the sensor. The distance is then mapped and scaled to a note based on the distance. The note is represented in numbers and the LEDs around the note light up. The note is then converted to frequency using the previous equation $f_n = f_0*a^n$ with the base note being "A" at 440 Hz. This is then written to the amplifier as before.
+
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C
+		Note note_play = Note(avg_mm, 95);
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+		This variable is used to keep track of what note the theremin is currently playing and displays it to the player. The takes in the frequency from the sensor and writes it to the bottom row of notes over the upcoming if there are any as a blue box.
+
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C
+		void handleNotes() {
+		  note_idx++;
+
+		  // add Notes while we have not gone through the song
+		  if (note_idx < freqs.size()) {
+		    notes.push_back(Note(freqs[note_idx]));
+		  }
+
+		  // draw all of the notes
+		  for (Note &note : notes) {
+		    note.draw();
+		    if (note.get_y() == 95 && listen_song == true){
+		      // play and display note
+		    }
+		  }
+
+		  // while we have notes
+		  if (notes.size() > 0) {
+
+		    // have we started playing a note? if so, play the note
+		    if (note_idx > 4 && notes.size() > 1 && listen_song == false) {
+		      playNote();
+
+		          // score the current note with what is being played
+		      int expected_note = find_closest_idx(notes.front().frequency());
+		      int actual_note = find_closest_idx(avg_mm);
+
+		      int lowPixel = expected_note * 2;
+		      int highPixel = lowPixel + 3;
+
+
+		      strip.SetPixelColor(lowPixel,RgbColor(0, 255, 255) );
+		      strip.SetPixelColor(highPixel,RgbColor(0, 255, 255) );
+		      strip.Show();
+
+		      Serial.printf("Expected: (%d, %d), Actual: (%d, %d)\n", expected_note, 
+		        notes.front().frequency(), avg_mm, actual_note);
+
+		      
+		      if (expected_note == actual_note) {
+		        score += 10;
+		        itoa(score, score_str, 10);
+		      }
+		    }
+		    
+		    // remove Notes that have expired
+		    if (notes.front().get_y() > 115) {
+		      notes.pop_front();
+		    }
+		  }
+
+		  if (listen_song == false){
+		    // move the note to the current location we are playing
+		    ...
+		  }
+
+		  // if all the notes are done, go to show score mode
+		  if (note_idx >= freqs.size() && notes.size() == 0) {
+		    tft.fillScreen(TFT_BLACK);
+		    state = SHOW_SCORE;
+		    note_idx = 0;
+		    listen_song = false;
+		    ledcWrite(0,0);
+		    clearStrip();
+		  }
+		}
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+		The handleNotes function deals with the bulk of the visualization of the notes along with anything else involving the notes in the play or listen mode such as audio or scoring. There is a running note_idx variable to track where in the song we are. The `notes` list tracks what notes need to be drawn and if there more notes left in the song it adds it to `notes` and removes what notes no longer need to be drawn. The function loops through all the notes in `notes` calling the Note draw method and if we are listening to the song it will display the bottom note on the LED and play it. While there are notes left, the function calls playNote and plays the note based on the TOF and finds the index of the note to turn on the corresponding LEDs. It then compares the note from the TOF to the note from the song and if they match, increments the score. If we are playing the song, it also shows what notes we are playing on the tft and LED. Once the song is done, the appropriate variables and parts are reset or cleared to show us the score.
+
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C
+		void showScore() {
+		  tft.setCursor(0, 0);
+		  tft.printf("Your score: %d, %s", score, songId);
+		  
+		  // button pressed
+		  if (bottomPin.update() != 0 || topPin.update() != 0) {
+		    selectedOption = 0;
+		    state = MENU;
+		    tft.fillScreen(TFT_BLACK);
+
+		    // post the score to the server
+		    ...
+		    do_http_request(host,request,response_buffer,OUT_BUFFER_SIZE, RESPONSE_TIMEOUT,true);
+
+		    state = MENU;
+		  }
+		}
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+		This function takes the gets the global score variable which holds the score from the last song played and displays it on the tft. Once a button is pressed, the score is uploaded to the server in a POST request using the do_http_request helper function and sends us back to the main menu.
+
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C
+		void handleMainMenu() {
+		  tft.setCursor(0, 0);
+
+		  for (int i = 0; i < 3; i++) {
+		    tft.printf(selectedOption == i ? "-> ": "   ");
+		    tft.printf("%s\n", selectionScreenOptions[i].c_str());
+		  }
+
+		  int top = topPin.update();
+		  int bot = bottomPin.update();
+
+		  if (top == 2 || bot == 2) {
+		    // toggle powersave mode
+		    ...
+		    tft.fillScreen(TFT_BLACK);
+		  } else if (top != 0) {
+		    // toggle selected option
+		    selectedOption = (selectedOption + 1) % 3;
+		  } else if (bot!= 0) {
+		    // select the mode
+		    switch (selectedOption) {
+		      ...
+		    }
+		  }
+		}
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+		This function draws the main menu and deals with functionality for it. A long button press here dims the tft and LED to save power. Hitting the top button chooses the mode and the bottom button selects it, changing the state.
+
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C
+		void drawGameScreen() {
+		  ...
+		}
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+		This function draws the different semitones and sets up the game screen to display notes.
+
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C
+		void drawFreePlayScreen() {
+		  ...
+		}
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+		This function is repeatedly called when in the freeplay mode. It draws the free play screen which includes where the current note is on the tft and LED and rest of the semitones while also playing the note based off of the TOF. A button press sends us back to the main menu.
+
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C
+		void drawRecordScreen() {
+		  ...
+
+		  //are we done yet???
+		  if (recordCount < 150) {
+		    recordCount++;
+
+		    tft.setCursor(0, 0);
+		    float timeLeft = (150 - recordCount) / 10.0;
+		    
+		    tft.printf("Time remaining: %f seconds\n", timeLeft);
+		  
+		    // same note previously
+		    if (old == avg_mm){
+		      count += 1;
+		      old = avg_mm;
+		    }
+		    else {
+		      // add a new note
+		      char output[15]; 
+		      sprintf(output, "%d,%d;", old, count);
+		      strcat(song, output);
+		      old = avg_mm;
+		      count = 1;
+		    }
+		  }
+
+		  // when we are done, post
+		  if (recordCount == 150) {
+		    state = SONG_NAME_ENTRY;
+		    ledcWrite(0,0);
+		    clearStrip();
+		  }
+		}
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+		This function is extremely similar to the previous function. However, it also tracks what notes are being played in the output variable in the form "freq,duration;". A button press won't send this back to the menu but hitting the time limit will and leaving the state uploads the song in output to the server.
+
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C
+		void drawPlayOrReselectScreen() {
+		  ...
+		}
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+		Once a song is chosen the player can choose to play it (short top button press), listen to it (long top button press), or choose another song (bottom button) which can be done here.
+
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C
+		void handleSongNameEntry() {
+		  float x, y;
+		  get_angle(&x, &y); //get angle values
+		  int bv = topPin.update(); //get button value
+		  songNameGetter.update(-y, bv, songEntryResponse);
+
+		  if (strcmp(songEntryResponse, oldSongEntryResponse) != 0) {
+		    ...
+		    tft.println(songEntryResponse);
+		  }
+		  memset(oldSongEntryResponse, 0, sizeof(oldSongEntryResponse));
+		  strcat(oldSongEntryResponse, songEntryResponse);
+
+		  if (saved) {
+		    saved = 0;
+		    songNameGetter.get_name(songName);
+		    ...
+		    do_http_request(host,request,response_buffer,OUT_BUFFER_SIZE, RESPONSE_TIMEOUT,true);
+		    tft.fillScreen(TFT_BLACK);
+		  
+		    state = MENU; 
+		  }
+		}
+		...
+		void handleUserNameEntry() {
+		  ...
+		}
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+		This function handleSongNameEntry uses the imu to calcuate the tilt of the theremin and using an instance of `NameGetter` creates a new song name to upload to the server using a POST request. handleUserNameEntry is nearly identical but uses a different `NameGetter` and EntryResponse instance.
+
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C
+		void handleSongMenu() {
+		  ...
+
+		  if (bottomPin.update() != 0) {
+		    sprintf(songId, menu[selectedSong].id.c_str());
+		    
+		    ...
+		    do_http_request(host, request, response_buffer, OUT_BUFFER_SIZE, RESPONSE_TIMEOUT, true);
+		    freqs = parse_song(response_buffer);
+		    
+		    state = PLAY_OR_RESELECT;
+		    tft.fillScreen(TFT_BLACK);
+		  } else if (topPin.update() != 0) {
+		    selectedSong++;
+
+		    if (selectedSong == menu.size()) {
+		      ...
+		    } else if (selectedSong % 16 == 0) {
+		      ...
+		    }
+		  }
+		}
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+		The function displays all the songs pulled from the server on startup. Clicking the top button switches between songs and clicking the bottom button chooses the song and pulls the song from the server using a GET request and parses the response into the proper song format.
+
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C
+		void handleGameState() {
+		  switch (state) {
+		    case USERNAME_ENTRY:
+		      handleUserNameEntry();
+		      break;
+		    case MENU:
+		      handleMainMenu();
+		      break;
+		    ...
+		  }
+		}
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+		This function is called every loop and is a massive state machine. Each state calls a corresponding function to deal with everything in that state.
+
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C
+		void loop() {
+		  imu.readAccelData(imu.accelCount);
+		  float x = imu.accelCount[0]*imu.aRes;
+		  primary_timer = millis();
+
+		  handleGameState();
+		  
+		  while(millis() - primary_timer < LOOP_PERIOD);
+		}
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+		The loop calls handleGameState which has cases to deal with all the different states in the game. It also updates the data from the imu and repeats after a delay.
+
+	**`Button.h`**
+
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C
+		class Button {
+			...
+		    public:
+			    Button(int p);
+			    void read();
+			    int update();		};
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+		The Button.h file holds the declaration of the button class used to differentiate between long and short presses and debounce the button. It holds a constructor, read, and update function defined in Button.cpp.
+
+	**`Button.cpp`**
+
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C
+		Button::Button(int p) {
+		  flag = 0;
+		  state = 0;
+		  pin = p;
+		  t_of_state_2 = millis(); //init
+		  t_of_button_change = millis(); //init
+		  debounce_time = 10;
+		  long_press_time = 1000;
+		  button_pressed = 0;
+		}
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+		This is the button constructor used to initialize objects of the button class seen in Button.h. In the code, this is used to create the top button and bottom button.
+
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C
+		void Button::read() {
+		  uint8_t button_state = digitalRead(pin);
+		  button_pressed = !button_state;
+		}
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+		The read method reads the button's value to update the value of the button being pressed.
+
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C
+		int Button::update() {
+		  read();
+		  flag = 0;
+		  switch (state) {
+		    ...
+		  }
+		  return flag;
+		}
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+		The update method returns the flag int which tells us if the button has been pressed or not and whether that was a short or long press. The method uses a state machine, implemented uses a series of cases and timers tracking the amount of time the button was held down to return the type of button press on release. The timers also do not register the button press if it is less than the debounce time. The flag returns 0 for no button press, 1 for a short button press, and 2 for a long button press.
+
+	**`support_functions.ino`**
+
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C
+		uint8_t char_append(char* buff, char c, uint16_t buff_size) {
+		        int len = strlen(buff);
+		        if (len>buff_size) return false;
+		        buff[len] = c;
+		        buff[len+1] = '\0';
+		        return true;
+		}
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+		If possible, the char append function appends the what is in the char array c to the buffer and returns true, otherwise it returns false and which means that the buffer is full.
+
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C
+		void do_http_request(char* host, char* request, char* response, uint16_t response_size, uint16_t response_timeout, uint8_t serial){
+		  ...
+		}
+		~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+		This helper function takes care of the http get and post requests. While connected to the host, it sends the specified request and reads out the response.
+
+Server Side
+-------------------------------------------------------------------------------
+
+### server:
+
+---
+
+	**`freq_est.py`**
+
+	**`score_server.py`**
+
+	**`server.py`**
+
+	**`wav.py`**
+
+	#### html:
+
+	---
+
+		**`scripts.js`**
 
 
 <!-- Markdeep: --><style class="fallback">body{visibility:hidden;white-space:pre;font-family:monospace}</style><script src="markdeep.min.js" charset="utf-8"></script><script src="https://casual-effects.com/markdeep/latest/markdeep.min.js?" charset="utf-8"></script><script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
